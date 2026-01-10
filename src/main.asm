@@ -6,22 +6,8 @@
 ;jmp main
 
 main
-    lda #$00
-    sta diskLoadAddress
-    lda #$04
-    sta diskLoadAddress+1
-    lda #$01
-    sta diskLoadDataBank
-    ;lda #$00
-    ;sta diskLoadFilenameBank
+    jsr showDirectory
 
-    jsr loadDirectoryFromDisk
-
-    jsr printDirectory
-
-
-    ;jsr loadSeqFile
-    
     rts
 
 filename            !text "About This Serve",0
@@ -34,3 +20,4 @@ deviceNumber        !byte 8
 !src "src/backend/input/disk/loadDir.asm"
 !src "src/backend/input/disk/loadSeq.asm"
 !src "src/frontend/output/textmode/vdcconsole.asm"
+!src "src/frontend/logic/showDirectory.asm"
