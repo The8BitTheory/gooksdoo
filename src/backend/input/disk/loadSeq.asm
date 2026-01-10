@@ -1,0 +1,6 @@
+!zone loadSeq
+
+loadSeqFile
+    
+    
+    rts

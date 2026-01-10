@@ -1,0 +1,352 @@
+parseDirectory
+    jsr .initDirectoryGopherOutput
+
+    jsr initParser
+
+    lda #zp_directoryAddress
+    sta c_stash_zp
+
+    ; skip 5 bytes (8 really, but 2 were skipped by bload itself)
+    ; one of these is the reverse-flag for screen output. we ignore that
+    jsr readNextByte
+    jsr readNextByte
+    jsr readNextByte
+    jsr readNextByte
+    jsr readNextByte
+
+    jsr clearScreen
+
+    ldy #5
+    ; read diskname
+    jsr .handleDiskName
+
+    jsr clearHeaderLine
+
+    lda #<.txtDirOfDisk
+    sta zp_memPtr
+    lda #>.txtDirOfDisk
+    sta zp_memPtr+1
+    jsr printHeaderLineUntilTab
+
+    lda #<.diskname
+    sta zp_memPtr
+    lda #>.diskname
+    sta zp_memPtr+1
+    jsr printHeaderLineUntilTab
+
+    lda #<.txtDash
+    sta zp_memPtr
+    lda #>.txtDash
+    sta zp_memPtr+1
+    jsr printHeaderLineUntilTab
+
+    +writeLnToDir txtEmptyLine  ; write an empty line on top. looks better
+
+; parsing dir entries until end of dir
+-   jsr readNextByte    ;$01
+    jsr readNextByte    ;$01
+
+    jsr readNextByte
+    sta .entryBlocks
+    pha
+    jsr readNextByte
+    sta .entryBlocks+1
+    tax
+    pla
+    ;ldx .entryBlocks+1
+    jsr makeItDec
+    jsr .skipZeroes
+    sty zp_tempX
+
+    jsr readNextByte    ; space if dir entry, B ($42) if end of dir (B of BLOCKS FREE)
+    cmp #' '
+    bne +
+    jsr .handleDirEntry ; name and type is parsed here
+    jmp -
+
+; parsing dir entries done
+; entryBlocks already contains the nr of free bytes
++   sta zp_tempA
+    lda .entryBlocks
+    ldx .entryBlocks+1
+    jsr makeItDec
+    jsr .skipZeroes
+
+    clc
+    tya
+    adc #<decResult
+    sta zp_memPtr
+    lda #>decResult
+    adc #0
+    sta zp_memPtr+1
+    jsr printHeaderLineUntilTab
+
+    lda #' '
+    jsr printAcc
+
+    jsr .handleDirEnd
+
+    lda #<.blocksFree
+    sta zp_memPtr
+    lda #>.blocksFree
+    sta zp_memPtr+1
+    jsr printHeaderLineUntilTab
+
+    +writeLnToDir txtEmptyLine
+    +writeLnToDir txtEmptyLine
+    +writeLnToDir txtDot
+
+    clc
+    lda dirAddress
+    adc #1
+    sta zp_directoryAddress
+    lda dirAddress+1
+    adc #0
+    sta zp_directoryAddress+1
+    
+    rts
+
+.handleDirEntry   ;blocks, name, type
+    sta zp_tempA
+
+    lda #0
+    sta .linePos
+
+    ;lda #'i'
+    ;jsr writeToDirectory
+    lda #' '
+    jsr writeToVisibleLine
+
+    ; write blocks. zp_tempX was written after .skipZeroes
+-   ldy zp_tempX
+    lda decResult,y
+    beq +
+    jsr writeToVisibleLine
+    inc zp_tempX
+    jmp -
+
++   lda zp_tempA        ; this is the space character that was parsed but not displayed
+    jsr writeToVisibleLine
+    jsr writeToVisibleLine    ; write a second space character. makes the directory appear better imho
+
+-   jsr readNextByte        ; can be quote or space
+    cmp #$22                ; is quote?
+    beq +
+    jsr writeToVisibleLine
+    jmp -
+
+    
++   jsr writeToVisibleLine
+    
+    ; parse filename
+    ldy #0  ; index for filename
+    sty zp_tempY
+-   jsr readNextByte    ; the first byte should be a quote char
+    cmp #$22
+    beq .filenameDone   ; null byte. we're done with parsing the entry line
+    ldy zp_tempY
+    sta .filename,y                ; if yes, write to filename
+    inc zp_tempY
+    jsr writeToVisibleLine
+    jmp -
+
+.filenameDone
+    jsr writeToVisibleLine    ; the trailing quotes character
+
+    ldy zp_tempY
+    ;iny
+    lda #0
+    sta .filename,y             ; conclude .filename with null byte
+
+-   jsr readNextByte
+    cmp #' '    ; when space characters end, we'll parse the filetype
+    bne +
+    jsr writeToVisibleLine
+    jmp -
+
+; here comes the filetype. PRG, SEQ, REL, USR, DEL, ...
+; seq should be opened when pressing return (it's either a textfile or a gopher file)
+; directories should be opened and listed
+; all other filetypes should not do anything at the moment
++   sta .filetype
+    jsr writeToVisibleLine
+-   jsr readNextByte
+    beq .createGopherLine
+    jsr writeToVisibleLine
+    jmp -
+
+.createGopherLine
+    lda .filetype
+    cmp #'S'
+    beq +
+    lda #'i'
+    jmp ++
++   lda #$30
+++  jsr writeToDirectory
+
+    ldx #0
+    stx zp_tempX
+-   ldx zp_tempX
+    lda .visibleLine,x
+    jsr writeToDirectory
+    inc zp_tempX
+    dec .linePos
+    bne -
+    
+    lda .filetype
+    cmp #'S'
+    beq +
+    +writeLnToDir txtTrail
+    rts
+
+    
++   lda .txtTab
+    jsr writeToDirectory
+
+    ; selector
+    lda #'/'
+    jsr writeToDirectory
+    ldx #0
+    stx zp_tempX
+-   ldx zp_tempX
+    lda .filename,x
+    beq +
+    jsr writeToDirectory
+    inc zp_tempX
+    jmp -
+
+    
++   lda .txtTab
+    jsr writeToDirectory
+
+    ; host
+    ldx #0
+    stx zp_tempX
+-   ldx zp_tempX
+    lda .txtDevice,x
+    beq +
+    jsr writeToDirectory
+    inc zp_tempX
+    jmp -
+
++   lda .txtTab
+    jsr writeToDirectory
+
+    ; port
+    clc
+    lda deviceNumber
+    adc #$30
+    jsr writeToDirectory
+    ;lda .txtTab
+    ;jsr writeToDirectory
+    ;lda #' '
+    ;jsr writeToDirectory
+    lda #$0d
+    jsr writeToDirectory
+    lda #$0a
+    jsr writeToDirectory
+
+    rts
+
+
+; we write the diskname to the headerline
+.handleDiskName
+    jsr writeToDirectory    ; I forgot why we do this here
+
+    ldx #0
+    stx zp_tempX
+-   jsr readNextByte    ; this should be a quote char
+    beq +
+    ldx zp_tempX
+    sta .diskname,x
+    inc zp_tempX
+    jmp -
+
++   rts
+
+; string is also 24 bytes long. BLOCKS FREE with trailing spaces
+.handleDirEnd
+    ldx #0
+    stx zp_tempX
+    lda zp_tempA
+    sta .blocksFree,x
+    inc zp_tempX
+
+-   jsr readNextByte    ; this should be a quote char
+    beq +
+    ldx zp_tempX
+    sta .blocksFree,x
+    inc zp_tempX
+    lda zp_tempX
+    cmp #26
+    beq +
+    jmp -
+
++   rts
+    nop
+
+.initDirectoryGopherOutput
+    lda zp_contentAddress
+    sta zp_directoryAddress
+    sta dirAddress
+    lda zp_contentAddress+1
+    sta zp_directoryAddress+1
+    sta dirAddress+1
+
+    lda #0
+    sta zp_linecount
+    sta zp_linecount+1
+    sta zp_responseSize
+    sta zp_responseSize+1
+    
+    lda #$31
+    sta zp_pageType
+
+    rts
+
+writeToDirectory
+    ldx zp_contentBank
+    ldy #0
+    jsr c_stash
+
+    inc zp_directoryAddress
+    bne +
+    inc zp_directoryAddress+1
+    
++   inc zp_responseSize
+    bne +
+    inc zp_responseSize+1
+
++   rts
+
+.skipZeroes
+    ; skip leading zeroes. if all zeroes, keep the last one (so we display "0" blocks)
+    ldx #0
+    ldy #0
+-   lda decResult,x
+    cmp #$30
+    bne +
+    iny
++   inx
+    cpx #4
+    bne -
+
+    rts
+
+writeToVisibleLine
+    ldx .linePos
+    sta .visibleLine,x
+    inc .linePos
+    rts
+
+.filename       !fill 17,0  ; reserve one more byte, that will always be null
+.filetype       !byte 0     ; one byte to store filetype. first char of whatever it is
+.diskname       !fill 26,0
+.blocksFree     !fill 26,0
+.entryBlocks    !word 0
+.txtDirOfDisk   !text "Diskname: ",0
+.txtDash        !text " - ",0
+.txtTab         !byte $09
+.visibleLine    !fill 32,0
+.linePos        !byte 0
+.txtDevice      !text "device",0
