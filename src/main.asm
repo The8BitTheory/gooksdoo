@@ -21,3 +21,6 @@ deviceNumber        !byte 8
 !src "src/backend/input/disk/loadSeq.asm"
 !src "src/frontend/output/textmode/vdcconsole.asm"
 !src "src/frontend/logic/showDirectory.asm"
+
+lineTable = *
+

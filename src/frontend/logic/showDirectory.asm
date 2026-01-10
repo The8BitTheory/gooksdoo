@@ -1,6 +1,7 @@
 !zone showDirectory
 
 showDirectory
+
     lda #$00
     sta diskLoadAddress
     lda #$04
@@ -9,7 +10,12 @@ showDirectory
     sta diskLoadDataBank
     ;lda #$00
     ;sta diskLoadFilenameBank
-
     jsr loadDirectoryFromDisk
 
+    ; break up directory into screenlines
+    lda #<lineTable
+    ldx #>lineTable
+
     jmp printDirectory
+    nop
+    nop
