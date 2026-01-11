@@ -6,7 +6,8 @@
 ;jmp main
 
 main
-    jsr showDirectory
+    jsr showTextfile
+;    jsr showDirectory
 
     rts
 

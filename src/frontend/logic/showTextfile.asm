@@ -22,8 +22,12 @@ showTextfile
     sta diskLoadDataBank
     sta zp_directoryBank
 
+    lda #8
+    sta diskLoadDeviceNr
+
     jsr loadSectorList
 
 
     rts
-    
+
+

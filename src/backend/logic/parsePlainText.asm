@@ -1,8 +1,10 @@
-; this creates the lineTable entries for properly displaying the file
-; it only parses a given number of lines, starting at a given number (usually the last "parsed" line)
-; data is parsed from $1:0400
+; this reads a seq file byte by byte, directly from disk.
+; when a new line starts, a pointer to that position is stored in lineTable
+; word wrap is done accordingly (primitive, according to space characters)
+; when a linebreak is encountered, the length is stored and parsing the line is done.
+; the last parsed position is kept, which makes it easy to continue parsing on the next line.
 
-; this routine only deals with ram (not vram, etc)
+; this routine only deals with disk and ram (not vram, etc)
 
 !zone plainText
 parsePlainText
@@ -13,13 +15,9 @@ parsePlainText
     sta .lineLength
     sta charsSinceSpace
 
-    
-; content is stored in the $1:0400 region, pointers to each line in the $1:f700 region
-; each line takes 3 bytes in the linktable. 2 bytes for pointer, 1 byte for line length
-; this also allows us to make word-wrap a user-choice
-
+; each line takes 3 bytes in the lineTable. 2 bytes for pointer, 1 byte for line length
 .parseLine
-    jsr .storePointerInTxtLinkTable
+    jsr .storePointerInLineTable
     lda #0
     sta charsSinceSpace
 
@@ -75,9 +73,9 @@ parsePlainText
     inc zp_linecount+1
     
 +   lda .lineLength
-    jsr .storeValueInTxtLinkTable
+    jsr .storeValueInLineTable
     lda #0
-    jsr .storeValueInTxtLinkTable
+    jsr .storeValueInLineTable
     lda #0
     sta .lineLength
     sta charsSinceSpace
@@ -88,11 +86,11 @@ parsePlainText
     bne .parseLine
 
 .doneParse
-    jsr .storePointerInTxtLinkTable
+    jsr .storePointerInLineTable
     lda .lineLength
-    jmp .storeValueInTxtLinkTable
+    jmp .storeValueInLineTable
     lda #0
-    jmp .storeValueInTxtLinkTable
+    jmp .storeValueInLineTable
 
 
 .storeValues
@@ -134,34 +132,33 @@ parsePlainText
 
     jmp .doneParse  ;if we find a single dot on a line, this is the end of the file
 
-
-
-.storeValueInTxtLinkTable
+.storeValueInLineTable
     ldy #0
-    jsr writeToLinkTable
+    jsr writeToLineTable
     rts
 
-.storePointerInTxtLinkTable
+.storePointerInLineTable
     ldy #0
     lda zp_contentAddress
 
-    jsr writeToLinkTable
+    jsr writeToLineTable
     lda zp_contentAddress+1
 
-    jsr writeToLinkTable
+    jsr writeToLineTable
 
     rts
 
 
-.stashToTxtLinkTable
+.stashToLineTable
     ldx zp_contentBank
     ; y must be set accordingly at this point
     jsr c_stash
-    inc zp_linkTablePosition
+    inc zp_lineTablePosition
     bne +
-    inc zp_linkTablePosition+1
+    inc zp_lineTablePosition+1
 
 +   rts
 
 .temp4          !word 0,0
 .lineLength     !byte 0     ; used to keep track of 80 chars max per line
+charsSinceSpace !byte 0

@@ -24,10 +24,28 @@ setNamLfsBnk
     jmp $ff68 ; call SETBNK
 
 openForInput
-    jsr $ffc0
-    ldx diskLoadFileNr
-    jmp $ffc6
+    jsr $ffc0           ; open
+    bcs.error
+    ldx diskLoadFileNr  
+    jsr $ffc6           ; chkin
+    bcs .error
+    rts
 
+openForOutput
+    jsr $ffc0           ; open
+    bcs .error
+    ldx diskLoadFileNr
+    jsr $ffc9           ;chkout
+    bcs .error
+    rts
+
+printHash
+    
+    rts
+
+getHash
+
+    rts
 
 
 readStatusChannel
