@@ -1,74 +1,63 @@
+!zone parseDirectory
+; this creates the lineTable entries for properly displaying the directory
+; it only parses a given number of lines, starting at a given number (usually the last "parsed" line)
+; data is parsed from $1:0400
+
+.readNextByte
+    ldx zp_directoryBank
+    ldy #0
+    jsr c_fetch
+
+.skipNextByte
+    inc zp_directoryAddress
+    bne +
+    inc zp_directoryAddress+1
+
++   rts
+
 parseDirectory
-    jsr .initDirectoryGopherOutput
-
-    jsr initParser
-
     lda #zp_directoryAddress
-    sta c_stash_zp
+    sta c_fetch_zp
 
     ; skip 5 bytes (8 really, but 2 were skipped by bload itself)
     ; one of these is the reverse-flag for screen output. we ignore that
-    jsr readNextByte
-    jsr readNextByte
-    jsr readNextByte
-    jsr readNextByte
-    jsr readNextByte
+    jsr .skipNextByte
+    jsr .skipNextByte
+    jsr .skipNextByte
+    jsr .skipNextByte
+    jsr .skipNextByte
 
-    jsr clearScreen
-
-    ldy #5
     ; read diskname
     jsr .handleDiskName
 
-    jsr clearHeaderLine
-
-    lda #<.txtDirOfDisk
-    sta zp_memPtr
-    lda #>.txtDirOfDisk
-    sta zp_memPtr+1
-    jsr printHeaderLineUntilTab
-
-    lda #<.diskname
-    sta zp_memPtr
-    lda #>.diskname
-    sta zp_memPtr+1
-    jsr printHeaderLineUntilTab
-
-    lda #<.txtDash
-    sta zp_memPtr
-    lda #>.txtDash
-    sta zp_memPtr+1
-    jsr printHeaderLineUntilTab
-
-    +writeLnToDir txtEmptyLine  ; write an empty line on top. looks better
 
 ; parsing dir entries until end of dir
--   jsr readNextByte    ;$01
-    jsr readNextByte    ;$01
+-   jsr .skipNextByte    ;$01
+    jsr .skipNextByte    ;$01
 
-    jsr readNextByte
-    sta .entryBlocks
+    jsr .readNextByte
+    sta .fileSize
     pha
-    jsr readNextByte
-    sta .entryBlocks+1
+    jsr .readNextByte
+    sta .fileSize+1
     tax
     pla
-    ;ldx .entryBlocks+1
+    ;ldx .fileSize+1
     jsr makeItDec
     jsr .skipZeroes
     sty zp_tempX
 
-    jsr readNextByte    ; space if dir entry, B ($42) if end of dir (B of BLOCKS FREE)
+    jsr .readNextByte    ; space if dir entry, B ($42) if end of dir (B of BLOCKS FREE)
     cmp #' '
     bne +
     jsr .handleDirEntry ; name and type is parsed here
     jmp -
 
 ; parsing dir entries done
-; entryBlocks already contains the nr of free bytes
+; fileSize already contains the nr of free bytes
 +   sta zp_tempA
-    lda .entryBlocks
-    ldx .entryBlocks+1
+    lda .fileSize
+    ldx .fileSize+1
     jsr makeItDec
     jsr .skipZeroes
 
@@ -107,15 +96,10 @@ parseDirectory
     rts
 
 .handleDirEntry   ;blocks, name, type
-    sta zp_tempA
+    sta .parsedChar    ; the character parsed recently
 
     lda #0
     sta .linePos
-
-    ;lda #'i'
-    ;jsr writeToDirectory
-    lda #' '
-    jsr writeToVisibleLine
 
     ; write blocks. zp_tempX was written after .skipZeroes
 -   ldy zp_tempX
@@ -125,7 +109,7 @@ parseDirectory
     inc zp_tempX
     jmp -
 
-+   lda zp_tempA        ; this is the space character that was parsed but not displayed
++   lda .parsedChar        ; this is the space character that was parsed but not displayed
     jsr writeToVisibleLine
     jsr writeToVisibleLine    ; write a second space character. makes the directory appear better imho
 
@@ -248,19 +232,29 @@ parseDirectory
 
     rts
 
-
-; we write the diskname to the headerline
 .handleDiskName
-    jsr writeToDirectory    ; I forgot why we do this here
-
+    jsr .skipNextByte   ; this should be the quote char
     ldx #0
     stx zp_tempX
--   jsr readNextByte    ; this should be a quote char
+
+-   jsr .readNextByte    ; this should be a quote char
+    cmp #$22            ; quote character (ending the filename)
     beq +
     ldx zp_tempX
     sta .diskname,x
     inc zp_tempX
     jmp -
+
++   .skipNextByte
+    .skipNextByte
+    .skipNextByte
+
+    jsr .readNextByte
+    sta .diskId
+    jsr .readNextByte
+    sta .diskId+1
+
+    .skipNextByte   ; zero byte, ending the diskname line
 
 +   rts
 
@@ -341,12 +335,14 @@ writeToVisibleLine
 
 .filename       !fill 17,0  ; reserve one more byte, that will always be null
 .filetype       !byte 0     ; one byte to store filetype. first char of whatever it is
-.diskname       !fill 26,0
+.diskname       !fill 17,0  ; null-terminated diskname string
+.diskId         !fill 3,0   ; null-terminated diskId string
 .blocksFree     !fill 26,0
-.entryBlocks    !word 0
+.fileSize       !word 0
 .txtDirOfDisk   !text "Diskname: ",0
 .txtDash        !text " - ",0
 .txtTab         !byte $09
 .visibleLine    !fill 32,0
 .linePos        !byte 0
 .txtDevice      !text "device",0
+.parsedChar     !byte 0

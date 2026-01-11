@@ -17,9 +17,13 @@ loadDirectoryFromDisk
 
     jsr setNamLfsBnk
 
+    ldx diskLoadAddress
+    ldy diskLoadAddress+1
+    lda #0  ; 0=load, else=verify)
+
     jsr $ffd5       ;BLOAD
         
-    jmp concludeLoadOpen
+    jmp closeDiskFile
 
 
 

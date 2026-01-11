@@ -1,6 +1,5 @@
 !zone commonDisk
 
-
 ; this calls setnam first. for that it needs a=filename length, x=filename LB, y=filename HB to be set
 ; for setlfs, it needs "diskLoadDeviceNumber" set to call setLFS. If zero, last used device is used ($ba)
 ; for setbnk, it needs diskLoadDataBank and diskLoadFilenameBank to be set
@@ -8,22 +7,28 @@
 setNamLfsBnk
     JSR $FFBD     ; call SETNAM
 
-    LDA #$02      ; file number 2
+    lda diskLoadFileNr
+    bne +
+    LDA #$02      ; default to file number 2
     ;LDX $BA       ; last used device number
-    ldx diskLoadDeviceNr
++   ldx diskLoadDeviceNr
     BNE +
     LDX #$08      ; default to device 8
-+   LDY #$00      ; secondary address 0     ; 0=load to x/y address, 1=load to header address
-    JSR $FFBA     ; call SETLFS
++   ldy diskLoadSecAddr
+    bne +
+    LDY #$00      ; secondary address 0     ; 0=load to x/y address, 1=load to header address
++   JSR $FFBA     ; call SETLFS
 
     lda diskLoadDataBank  ; bank to load data to
     ldx diskLoadFilenameBank  ; bank of filename
-    jsr $ff68 ; call SETBNK
+    jmp $ff68 ; call SETBNK
 
-    ldx diskLoadAddress
-    ldy diskLoadAddress+1
-    lda #0  ; 0=load, else=verify)
-    rts
+openForInput
+    jsr $ffc0
+    ldx diskLoadFileNr
+    jmp $ffc6
+
+
 
 readStatusChannel
     lda #1 ;filenr
@@ -62,7 +67,7 @@ readStatusChannel
 
     rts
 
-concludeLoadOpen
+closeDiskFile
         bcs .error
 
         ; write to content address here
@@ -73,8 +78,10 @@ concludeLoadOpen
         ;sta zp_contentAddress+1
 
 .close
+        lda diskLoadFileNr
+        bne +
         LDA #$02      ; filenumber 2
-        JSR $FFC3     ; call CLOSE
++       JSR $FFC3     ; call CLOSE
 
         JSR $FFCC     ; call CLRCHN
         RTS
@@ -121,7 +128,9 @@ fileOpError     !byte 0
 diskStatus  !fill 64
 .statusCode !word 0     ; st
 
+diskLoadFileNr          !byte 0
 diskLoadDeviceNr        !byte 0
+diskLoadSecAddr         !byte 0
 diskLoadDataBank        !byte 0
 diskLoadFilenameBank    !byte 0
 diskLoadAddress         !word 0     ; the address in bank "diskLoadDataBank" that's used to write the data to
