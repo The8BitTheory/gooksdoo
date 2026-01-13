@@ -1,12 +1,20 @@
 !zone loadSectorList
 
-chrout = $ffd2
-chkout = $ffc9  ; x=logFn, sets device for chrout
-
-chkin = $ffc6
-chrin = $ffcf
+!macro writeAcc {
+    jsr chrout
+    ldy $90
+    beq +
+    jmp outError
++
+}
 
 loadSectorList
+    
+    lda #18
+    sta .track
+    lda #1
+    sta .sector
+
     lda #0
     sta fileOpError
 
@@ -15,6 +23,7 @@ loadSectorList
     sta diskLoadFileNr
     lda #15
     sta diskLoadSecAddr
+
     lda #0
     jsr setNamLfsBnk
     jsr openForOutput
@@ -24,50 +33,17 @@ loadSectorList
     sta diskLoadFileNr
     lda #5
     sta diskLoadSecAddr
+    
     lda #1
-    lda #<.filenameOpenBuffer
-    ldx #>.filenameOpenBuffer
+    ldx #<.filenameOpenBuffer
+    ldy #>.filenameOpenBuffer
     jsr setNamLfsBnk
     jsr openForInput
 
-    lda #18
-    sta .track
-    lda #01
-    sta .sector
+.readSector
+    jsr doReadSector
 
-    ; print#15,"U1:";7;0;track;sector    - drive reads sector into disk 
-    ;ldx #15
-    ;jsr chkout
-
-    ldx #0
--   lda .directoryCmd,x
-    beq +
-    jsr chrout
-    ldy $90
-    bne .outError
-    inx
-    jmp -
-
-+   lda #'4'
-    jsr chrout
-    lda #'0'
-    jsr chrout
-    lda #' '
-    jsr chrout
-    lda #'0'
-    jsr chrout
-
-    ;ldx #5
-    ;jsr chkin
-    ;bcs .inError
-    ldy #0
-    ; get#5 track of next block
--   jsr chrin
-    sta .result,y
-    ldx $90
-    bne .inError
-    inx
-    bne -
+    jmp .searchFileInSector
 
     ; get#5 sector of next block
 
@@ -83,19 +59,189 @@ loadSectorList
 
     rts
 
+.searchFileInSector
+    lda .result
+    sta .nextTrack
+    lda .result+1
+    sta .nextSector
+
+    ldy #2
+-   lda .result,y
+    cmp #$81        ; match filetype seq?
+    beq .searchFilename ; type matches, check filename
+
+    ; otherwise, check next directory entry
+.checkNextDirectoryEntry
+    tya
+    clc
+    adc #32
+    bcs .goToNextSector
+    tay
+    jmp -
+
+.goToNextSector
+    lda .nextTrack
+    beq +       ; null means: last sector reached
+    sta .track
+    lda .nextSector
+    sta .sector
+    jmp .readSector
+
++   jmp .fileNotFound
+    nop
+    nop
+
+
+.searchFilename
+    sty .index
+    iny
+    lda .result,y
+    sta .track
+    iny
+    lda .result,y
+    sta .sector
+
+    ldx #0
+-   iny
+    lda .result,y
+    cmp .filename,x
+    bne .skipToNextEntry
+    inx
+    cmp #$a0
+    bne -
+
+    lda .index
+    clc
+    adc #28
+    tay
+    lda .result,y
+    sta .nrBlocks
+    lda .result+1,y
+    sta .nrBlocks+1
+    jmp .fileFound
+
+.skipToNextEntry
+    ldy .index
+    jmp .checkNextDirectoryEntry
+
+.fileNotFound
+    jmp .close
+    rts
+
+.fileFound
+    jsr initPlainTextSectorParser ; initializes all variables and pointers
+
+    ; get the first sector of the file
+-   jsr doReadSector
+
+; parse it and keep parsing until we have lineTable entries for the first 25 lines on screen
+    
+    jsr parseSector         ; parses as many lines as the sector contains. might end with incomplete line
+
+    lda .result
+    beq +
+    sta .nextTrack
+    lda .result+1
+    sta .nextSector
+
+    lda .result
+    lda .nextTrack
+    sta .track
+    lda .nextSector
+    sta .sector
+    jmp -
+
+    
+
+    ;jsr parseSector
++   jmp .close
+    nop
+    nop
+    rts
+    nop
+
+; this routine could be moved to a low-level disk-related asm file
+doReadSector
+    ldx #15
+    jsr chkout
+    bcc +
+    jmp outError
+
+    ; print#15,"U1:";7;0;track;sector    - drive reads sector into disk 
++   ldx #0
+-   lda .blockRead,x
+    beq +
+    +writeAcc
+    inx
+    jmp -
+
++   lda .track
+    jsr sendAsDec
+
+    lda #' '
+    +writeAcc
+
+    lda .sector
+    jsr sendAsDec
+
+    lda #$0d
+    +writeAcc
+
++   jsr clrchn
+
+    ldx #5
+    jsr chkin
+    bcc +
+    jmp .inError
++   ldy #0
+    ; get#5 track of next block
+-   jsr chrin
+    sta .result,y
+    ldx $90
+    beq +
+    cpx #64
+    beq .sectorComplete
+    jmp .inError
++   iny
+    bne -
+.sectorComplete
+    rts
+
+sendAsDec
+    ldx #0
+    jsr makeItDec
+    
+    ldy #4
+    sty .index
+    ldx #0
+-   lda decResult,x
+    +writeAcc
+    inx
+    dec .index
+    bpl -
+
+    rts
+
 .inError
     ;5: device not present
 
     sta .errorCode
     jmp .close
 
-.outError
+outError
     sta .errorCode
     jmp .close
+
+; when looking for the file to open
+.nextTrack          !byte 0
+.nextSector         !byte 0
+.filename           !pet "bridge",$a0
 
 .errorCode          !byte 0
 .track              !byte 0
 .sector             !byte 0
-.filenameOpenBuffer !text '#'
+.filenameOpenBuffer !pet '#'
 .result             !fill 256
-.directoryCmd       !pet "u1 5 0 ",0   ; followed by track and sector
+.blockRead          !pet "u1:5 0 ",0;00018 00001",$0d,0; " 5 0 ",0   ; followed by track and sector
+.index              !byte 0
+.nrBlocks           !word 0 ; the number of blocks the file has

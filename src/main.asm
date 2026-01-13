@@ -22,6 +22,7 @@ deviceNumber        !byte 8
 !src "src/backend/input/disk/loadDir.asm"
 ;!src "src/backend/input/disk/loadSeq.asm"
 !src "src/backend/input/disk/loadSectorList.asm"
+!src "src/backend/logic/plainTextSectorParser.asm"
 !src "src/frontend/output/textmode/vdcconsole.asm"
 !src "src/frontend/logic/showDirectory.asm"
 !src "src/frontend/logic/showTextfile.asm"

@@ -14,6 +14,7 @@
 showTextfile
     lda #$00
     sta diskLoadAddress
+    sta diskLoadFilenameBank
     sta zp_directoryAddress
     lda #$04
     sta diskLoadAddress+1
@@ -22,7 +23,7 @@ showTextfile
     sta diskLoadDataBank
     sta zp_directoryBank
 
-    lda #8
+    lda #9
     sta diskLoadDeviceNr
 
     jsr loadSectorList

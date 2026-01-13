@@ -4,8 +4,24 @@
 ; for setlfs, it needs "diskLoadDeviceNumber" set to call setLFS. If zero, last used device is used ($ba)
 ; for setbnk, it needs diskLoadDataBank and diskLoadFilenameBank to be set
 ; for load itself, it needs diskLoadAddress and diskLoadAddress+1 to be set
+
+chrout = $ffd2
+chkout = $ffc9  ; x=logFn, sets device for chrout
+
+chkin = $ffc6
+chrin = $ffcf
+
+open = $ffc0
+close = $ffc3
+
+clrchn = $ffcc
+
+setnam = $ffbd
+setlfs = $ffba
+setbnk = $ff68
+
 setNamLfsBnk
-    JSR $FFBD     ; call SETNAM
+    JSR setnam     ; call SETNAM
 
     lda diskLoadFileNr
     bne +
@@ -17,25 +33,25 @@ setNamLfsBnk
 +   ldy diskLoadSecAddr
     bne +
     LDY #$00      ; secondary address 0     ; 0=load to x/y address, 1=load to header address
-+   JSR $FFBA     ; call SETLFS
++   JSR setlfs     ; call SETLFS
 
     lda diskLoadDataBank  ; bank to load data to
     ldx diskLoadFilenameBank  ; bank of filename
-    jmp $ff68 ; call SETBNK
+    jmp setbnk ; call SETBNK
 
 openForInput
-    jsr $ffc0           ; open
+    jsr open           ; open
     bcs.error
     ldx diskLoadFileNr  
-    jsr $ffc6           ; chkin
+    jsr chkin           ; chkin
     bcs .error
     rts
 
 openForOutput
-    jsr $ffc0           ; open
+    jsr open           ; open
     bcs .error
     ldx diskLoadFileNr
-    jsr $ffc9           ;chkout
+    jsr chkout           ;chkout
     bcs .error
     rts
 
@@ -54,17 +70,17 @@ readStatusChannel
     bne +
     ldx #8
 +   ldy #15 ; secondary device
-    jsr $ffba   ; setLFS
+    jsr setlfs   ; setLFS
 
     lda #0      ;kein name
-    jsr $ffbd   ; setNAM
+    jsr setnam   ; setNAM
 
-    jsr $ffc0 ; open
+    jsr open ; open
     ldx #1 ;filenr
-    jsr $ffc6 ;chkin
+    jsr chkin ;chkin
 
     ldx #0
--   jsr $ffcf ;input
+-   jsr chrin ;input
     sta diskStatus,x
     cpx #2
     bcs +
@@ -73,9 +89,9 @@ readStatusChannel
     bit $90 ;status testen
     bvc -
 
-    jsr $ffcc ;clrch
+    jsr clrchn ;clrch
     lda #1
-    jsr $ffc3 ;close
+    jsr close ;close
 
     lda #<.statusCode
     sta zp_memPtr
@@ -99,9 +115,9 @@ closeDiskFile
         lda diskLoadFileNr
         bne +
         LDA #$02      ; filenumber 2
-+       JSR $FFC3     ; call CLOSE
++       JSR close     ; call CLOSE
 
-        JSR $FFCC     ; call CLRCHN
+        JSR clrchn     ; call CLRCHN
         RTS
 
 .error
