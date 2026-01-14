@@ -13,7 +13,6 @@ main
 
 filename            !text "About This Serve",0
 filenameLength      !byte 16
-deviceNumber        !byte 8
 
 !src "src/system/c128.asm"
 !src "src/converters/converters.asm"
@@ -30,7 +29,7 @@ deviceNumber        !byte 8
 ; a lineTable entry is a pointer into raw content to form a displayable line.
 ; lines can be 80 chars max
 ; an entry consists of:
-; - 2 bytes: start of line
+; - 4 bytes: start of line. deviceNr (255 for REU, 254 for GeoRAM), trackNr (1-255), sectorNr (0-), offset inside sector
 ; - 1 byte: length of line
 
 lineTable = *

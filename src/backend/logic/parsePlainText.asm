@@ -153,9 +153,9 @@ parsePlainText
     ldx zp_contentBank
     ; y must be set accordingly at this point
     jsr c_stash
-    inc zp_lineTablePosition
+    inc zp_lineTable
     bne +
-    inc zp_lineTablePosition+1
+    inc zp_lineTable+1
 
 +   rts
 

@@ -9,11 +9,10 @@
 }
 
 loadSectorList
-    
     lda #18
-    sta .track
+    sta track
     lda #1
-    sta .sector
+    sta sector
 
     lda #0
     sta fileOpError
@@ -41,6 +40,8 @@ loadSectorList
     jsr openForInput
 
 .readSector
+    ;lda #1
+    ;sta .headOnly
     jsr doReadSector
 
     jmp .searchFileInSector
@@ -60,13 +61,8 @@ loadSectorList
     rts
 
 .searchFileInSector
-    lda .result
-    sta .nextTrack
-    lda .result+1
-    sta .nextSector
-
     ldy #2
--   lda .result,y
+-   lda sectorData,y
     cmp #$81        ; match filetype seq?
     beq .searchFilename ; type matches, check filename
 
@@ -80,11 +76,11 @@ loadSectorList
     jmp -
 
 .goToNextSector
-    lda .nextTrack
+    lda nextTrack
     beq +       ; null means: last sector reached
-    sta .track
-    lda .nextSector
-    sta .sector
+    sta track
+    lda nextSector
+    sta sector
     jmp .readSector
 
 +   jmp .fileNotFound
@@ -95,15 +91,15 @@ loadSectorList
 .searchFilename
     sty .index
     iny
-    lda .result,y
-    sta .track
+    lda sectorData,y
+    sta track
     iny
-    lda .result,y
-    sta .sector
+    lda sectorData,y
+    sta sector
 
     ldx #0
 -   iny
-    lda .result,y
+    lda sectorData,y
     cmp .filename,x
     bne .skipToNextEntry
     inx
@@ -114,9 +110,9 @@ loadSectorList
     clc
     adc #28
     tay
-    lda .result,y
+    lda sectorData,y
     sta .nrBlocks
-    lda .result+1,y
+    lda sectorData+1,y
     sta .nrBlocks+1
     jmp .fileFound
 
@@ -131,29 +127,26 @@ loadSectorList
 .fileFound
     jsr initPlainTextSectorParser ; initializes all variables and pointers
 
-    ; get the first sector of the file
+    ;lda #0
+    ;sta .headOnly
+
+    ; get the first/next sector of the file
 -   jsr doReadSector
 
-; parse it and keep parsing until we have lineTable entries for the first 25 lines on screen
+; parse it and keep parsing until we have lineTable entries for the first 25 (or 23) lines on screen
     
     jsr parseSector         ; parses as many lines as the sector contains. might end with incomplete line
+;    jsr displayLines        ; displays as many complete lines as have been parsed.
 
-    lda .result
+    lda nextTrack
     beq +
-    sta .nextTrack
-    lda .result+1
-    sta .nextSector
 
-    lda .result
-    lda .nextTrack
-    sta .track
-    lda .nextSector
-    sta .sector
+    lda nextTrack
+    sta track
+    lda nextSector
+    sta sector
     jmp -
-
     
-
-    ;jsr parseSector
 +   jmp .close
     nop
     nop
@@ -175,13 +168,13 @@ doReadSector
     inx
     jmp -
 
-+   lda .track
++   lda track
     jsr sendAsDec
 
     lda #' '
     +writeAcc
 
-    lda .sector
+    lda sector
     jsr sendAsDec
 
     lda #$0d
@@ -193,10 +186,25 @@ doReadSector
     jsr chkin
     bcc +
     jmp .inError
-+   ldy #0
+
++   jsr chrin
+    sta nextTrack
+    ldx $90
+    beq +
+    jmp .inError
++   jsr chrin
+    sta nextSector
+    ldx $90
+    beq +
+    jmp .inError
+
++   ;lda .headOnly
+    ;beq .sectorComplete 27 vs 72 seconds
+
+    ldy #2
     ; get#5 track of next block
 -   jsr chrin
-    sta .result,y
+    sta sectorData,y
     ldx $90
     beq +
     cpx #64
@@ -205,15 +213,16 @@ doReadSector
 +   iny
     bne -
 .sectorComplete
+    jsr clrchn
     rts
 
 sendAsDec
     ldx #0
     jsr makeItDec
     
-    ldy #4
+    ldy #1
     sty .index
-    ldx #0
+    ldx #3
 -   lda decResult,x
     +writeAcc
     inx
@@ -233,15 +242,15 @@ outError
     jmp .close
 
 ; when looking for the file to open
-.nextTrack          !byte 0
-.nextSector         !byte 0
+nextTrack          !byte 0
+nextSector         !byte 0
 .filename           !pet "bridge",$a0
 
 .errorCode          !byte 0
-.track              !byte 0
-.sector             !byte 0
+track              !byte 0
+sector             !byte 0
 .filenameOpenBuffer !pet '#'
-.result             !fill 256
+sectorData             !fill 256
 .blockRead          !pet "u1:5 0 ",0;00018 00001",$0d,0; " 5 0 ",0   ; followed by track and sector
 .index              !byte 0
 .nrBlocks           !word 0 ; the number of blocks the file has

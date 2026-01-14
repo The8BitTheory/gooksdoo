@@ -47,7 +47,7 @@ twoCharsToDeviceNr
     clc
     adc .deviceNr
 .portToDeviceNrDone1Digit
-    sta deviceNumber
+    sta convResult
     rts
 
 .invalidPort
@@ -56,3 +56,4 @@ twoCharsToDeviceNr
 .nrBytes        !byte 0     ; used for converting port to device nr
 .deviceNr       !byte 0     ; temporary value. if successful, written to deviceNumber
 .deviceKey      !text "device",$9,$0
+convResult      !byte 0
