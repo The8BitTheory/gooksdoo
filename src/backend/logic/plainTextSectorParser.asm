@@ -9,6 +9,8 @@ initPlainTextSectorParser
     lda #0
     sta latestParsedLine
     sta latestParsedLine+1
+    sta parseLinePointer
+    sta parseLinePointer+1
 
     lda #23
     sta linesToView
@@ -118,6 +120,7 @@ readNextByteWithoutInc
     sta (zp_lineTable),y
 
     jsr incLineTable
+    inc parseLinePointer
 
     lda #0
     sta .lineLength
@@ -171,12 +174,106 @@ incLineTable
     sta zp_lineTable+1
     rts
 
+initLineBuffer
+    lda #<bufferTable
+    sta zp_lineBuffer
+    lda #>bufferTable
+    sta zp_lineBuffer+1
+    
+    lda #0
+    sta .writeIndex
+    rts
+
+; this is used for initial display of the screen
+sectorDataToBuffer
+    lda bufferLinePointer
+    sta multiply16
+    lda bufferLinePointer+1
+    sta multiply16+1
+    lda #lineTableIncr
+    sta multiply8
+    jsr multiply    ; result: a=lo, y=hi
+
+    jsr calcZpLineTable
+
+.nextLineFromSectorData
+    ldy #3
+    lda (zp_lineTable),y
+    sta .readIndex
+    
+    iny
+    lda (zp_lineTable),y
+    tax ; line length
+    stx .lineLength
+
+    jsr .writeBufferEntry
+
+-   ldy .readIndex
+    lda sectorData,y
+    
+    ldy .writeIndex
+    sta lineBuffer,y
+    
+    inc .writeIndex
+    bne +
+    inc .writeIndex+1
+
++   inc .readIndex
+    beq +       ; .readIndex is running over. sector data is at an end
+    dec .lineLength
+    bne -
+    ;jsr .writeBufferEntry
+    jmp .nextLineFromSectorData
+
+    lda #$0d
+    jsr chrout
+
++   rts
+    nop
+
+.writeBufferEntry
+    ldy #0
+    lda .writeIndex
+    sta (zp_lineBuffer),y
+    
+    iny
+    lda .writeIndex+1
+    sta (zp_lineBuffer),y
+
+    iny
+    lda .lineLength
+    sta (zp_lineBuffer),y
+
+; increase line-buffer pointer by 3 (write entry)
+    clc
+    lda zp_lineBuffer
+    adc #3
+    sta zp_lineBuffer
+    lda zp_lineBuffer+1
+    adc #0
+    sta zp_lineBuffer+1
+
+; increase line-table pointer by 5 (read entry)
+    clc
+    lda zp_lineTable
+    adc #lineTableIncr
+    sta zp_lineTable
+    lda zp_lineTable+1
+    adc #0
+    sta zp_lineTable+1
+
+    inc bufferLinePointer
+    bne +
+    inc bufferLinePointer+1
+
++   rts
 
 
 .temp4          !word 0,0
 .lineLength     !byte 0     ; used to keep track of 80 chars max per line
 .readIndex      !byte 0
 .charsSinceSpace !byte 0
+.writeIndex     !word 0
 
 .leftToParse    !byte 0     ; how many bytes in this sector are still left
 lineCount       !word 0     ; nr of total lines parsed in the file so far
@@ -185,4 +282,5 @@ linesToView    !byte 0     ; how many lines should be viewed? (parse is always d
                             ; or 1 if just scrolling up or down
 lineTableIncr   = 5
 latestParsedLine   !word 0 ; how many lines of the document are available for display?
-lineBuffer      !fill 80    ; buffer for lines spreading across sectors. used for displayLineFromCurrentSector
+lineBuffer      !fill 2000    ; buffer for lines spreading across sectors. used for displayLineFromCurrentSector
+bufferTable     !fill 69        ; 3 bytes per entry, 25 entries max (23, really)

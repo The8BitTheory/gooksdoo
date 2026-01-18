@@ -71,13 +71,7 @@ displayLineFromCurrentSector
     lda #lineTableIncr      ; size of lineTable entry
     sta multiply8
     jsr multiply     ; result A=lo, Y=hi
-
-    clc
-    adc #<lineTable
-    sta zp_lineTable
-    tya
-    adc #>lineTable
-    sta zp_lineTable+1
+    jsr calcZpLineTable
 
     ldy #3
     lda (zp_lineTable),y
