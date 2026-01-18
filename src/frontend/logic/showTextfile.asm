@@ -32,3 +32,5 @@ showTextfile
     rts
 
 
+filename            !text "About This Serve",0
+filenameLength      !byte 16

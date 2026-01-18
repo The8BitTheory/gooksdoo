@@ -61,9 +61,49 @@ printDirectory
     
     dec .counter
     bne -
-
-
     rts
+
+displayLineFromCurrentSector
+    lda lastDisplayedLine
+    sta multiply16
+    lda lastDisplayedLine+1
+    sta multiply16+1
+    lda #lineTableIncr      ; size of lineTable entry
+    sta multiply8
+    jsr multiply     ; result A=lo, Y=hi
+
+    clc
+    adc #<lineTable
+    sta zp_lineTable
+    tya
+    adc #>lineTable
+    sta zp_lineTable+1
+
+    ldy #3
+    lda (zp_lineTable),y
+    pha
+    ;sta .lineStart
+    
+    iny
+    lda (zp_lineTable),y
+    tax
+    ;sta .lineLength
+
+    pla
+    tay
+
+    ;ldy .lineStart
+-   lda sectorData,y
+    jsr chrout
+    iny
+    beq +       ; y is running over. sector data is at an end
+    dex
+    bne -
+
+    lda #$0d
+    jsr chrout
+
++   rts
 
 ; ------------------------------------------------
 ; vdc library functions. taken from vdc-basic
@@ -95,6 +135,9 @@ A_to_vdc_data ; write A to currently selected VDC register
 
 .lineNr     !byte 0
 .counter    !byte 0
+.lineStart  !byte 0
+.lineLength !byte 0
+
 
 screenLineOffset   !word   0,  80, 160, 240, 320, 400, 480, 560, 640, 720, 800, 880
                     !word 960,1040,1120,1200,1280,1360,1440,1520,1600,1680,1760,1840,1920

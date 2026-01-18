@@ -48,7 +48,7 @@ loadSectorList
 
     ; get#5 sector of next block
 
-.close
+closeSectorAccess
     ; close5
     lda #5
     sta diskLoadFileNr
@@ -114,44 +114,17 @@ loadSectorList
     sta .nrBlocks
     lda sectorData+1,y
     sta .nrBlocks+1
-    jmp .fileFound
+    
+    jmp loadSeqFileViaSectors
 
 .skipToNextEntry
     ldy .index
     jmp .checkNextDirectoryEntry
 
 .fileNotFound
-    jmp .close
+    jmp closeSectorAccess
     rts
 
-.fileFound
-    jsr initPlainTextSectorParser ; initializes all variables and pointers
-
-    ;lda #0
-    ;sta .headOnly
-
-    ; get the first/next sector of the file
--   jsr doReadSector
-
-; parse it and keep parsing until we have lineTable entries for the first 25 (or 23) lines on screen
-    
-    jsr parseSector         ; parses as many lines as the sector contains. might end with incomplete line
-;    jsr displayLines        ; displays as many complete lines as have been parsed.
-
-    lda nextTrack
-    beq +
-
-    lda nextTrack
-    sta track
-    lda nextSector
-    sta sector
-    jmp -
-    
-+   jmp .close
-    nop
-    nop
-    rts
-    nop
 
 ; this routine could be moved to a low-level disk-related asm file
 doReadSector
@@ -235,11 +208,11 @@ sendAsDec
     ;5: device not present
 
     sta .errorCode
-    jmp .close
+    jmp closeSectorAccess
 
 outError
     sta .errorCode
-    jmp .close
+    jmp closeSectorAccess
 
 ; when looking for the file to open
 nextTrack          !byte 0
@@ -254,3 +227,6 @@ sectorData             !fill 256
 .blockRead          !pet "u1:5 0 ",0;00018 00001",$0d,0; " 5 0 ",0   ; followed by track and sector
 .index              !byte 0
 .nrBlocks           !word 0 ; the number of blocks the file has
+
+
+

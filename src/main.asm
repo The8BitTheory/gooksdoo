@@ -6,20 +6,40 @@
 ;jmp main
 
 main
+    lda #$0d
+    jsr chrout
+    lda #14
+    jsr chrout
+
+    jsr .printLineTableAddress
     jsr showTextfile
 ;    jsr showDirectory
 
     rts
 
-filename            !text "About This Serve",0
-filenameLength      !byte 16
+.printLineTableAddress
+    lda #>lineTable
+    jsr byteToHex
+    lda hexStringResult
+    jsr chrout
+    lda hexStringResult+1
+    jsr chrout
+    lda #<lineTable
+    jsr byteToHex
+    lda hexStringResult
+    jsr chrout
+    lda hexStringResult+1
+    jmp chrout
+
+
 
 !src "src/system/c128.asm"
 !src "src/converters/converters.asm"
+!src "src/converters/calculators.asm"
 !src "src/converters/decHelper.asm"
 !src "src/backend/input/disk/commonDisk.asm"
 !src "src/backend/input/disk/loadDir.asm"
-;!src "src/backend/input/disk/loadSeq.asm"
+!src "src/backend/input/disk/loadSeq.asm"
 !src "src/backend/input/disk/loadSectorList.asm"
 !src "src/backend/logic/plainTextSectorParser.asm"
 !src "src/frontend/output/textmode/vdcconsole.asm"

@@ -6,8 +6,12 @@ initPlainTextSectorParser
     lda #>lineTable
     sta zp_lineTable+1
 
+    lda #0
+    sta latestParsedLine
+    sta latestParsedLine+1
+
     lda #23
-    sta linesToParse
+    sta linesToView
     rts
 
 parseSector
@@ -21,8 +25,8 @@ parseSector
     ldy #2
     sty .readIndex
 -   jsr .parseLine
-    bcs +
-    iny
+    ldy .leftToParse
+    beq +
     bne -
 
 +   rts
@@ -46,22 +50,27 @@ readNextByteWithoutInc
 
 ; each line takes 3 bytes in the lineTable. 2 bytes for pointer, 1 byte for line length
 .parseLine
+    lda .lineLength
+    bne .continueParseLine
+
     jsr .storePointerInLineTable    ; stores the start of the line (device, track, sector, y-offset)
     lda #0
     sta .charsSinceSpace
 
+.continueParseLine
 -   jsr readNextByte
-    ;bcs .finishLineWithBreak
-    bcs .doneParse
-    cmp #' '            ; if this is a space character, we reset the counter
+    bcc +
+    jmp .doneParse
++   cmp #' '            ; if this is a space character, we reset the counter
     bne +
+    ldy #0
     sty .charsSinceSpace ; y should be zero because it was set in readNextByte
 +   inc .charsSinceSpace
     
     cmp #$0d    ;line break?
-    beq -
-    cmp #$0a    ; other line break
     beq .finishLineWithBreak
+    cmp #$0a    ; other line break
+    beq -
 
     inc .lineLength
     lda .lineLength
@@ -114,17 +123,15 @@ readNextByteWithoutInc
     sta .lineLength
     sta .charsSinceSpace
 
-    dec linesToParse
-    beq .doneParse
+    inc latestParsedLine
+    bne +
+    inc latestParsedLine+1
 
-    lda .leftToParse
-    bne .parseLine
++   lda .leftToParse
+    beq .doneParse
+    jmp .parseLine
 
 .doneParse
-    jsr .storePointerInLineTable
-;    ldy #4
-;    lda .lineLength
-;    sta (zp_lineTable),y
     rts
 
 
@@ -173,7 +180,9 @@ incLineTable
 
 .leftToParse    !byte 0     ; how many bytes in this sector are still left
 lineCount       !word 0     ; nr of total lines parsed in the file so far
-linesToParse    !byte 0     ; how many lines should be parsed?
+linesToView    !byte 0     ; how many lines should be viewed? (parse is always done sector-wise)
                             ; 23 for a full screen (header and footer line excluded)
                             ; or 1 if just scrolling up or down
 lineTableIncr   = 5
+latestParsedLine   !word 0 ; how many lines of the document are available for display?
+lineBuffer      !fill 80    ; buffer for lines spreading across sectors. used for displayLineFromCurrentSector

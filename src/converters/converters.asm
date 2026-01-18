@@ -1,3 +1,34 @@
+!zone converters
+
+; converts a nybble value ($0-$f) to ascii for screen output (might need toScreencode, depending on how it's used)
+nybbleToHex
+    clc
+    cmp #10
+    bpl +
+    adc #$30
+    rts
+
++   adc #54
+    rts
+
+byteToHex
+    ; lower nybble
+    pha
+    and #%00001111
+    jsr nybbleToHex
+    sta hexStringResult+1
+
+    ; upper nybble
+    pla ; stash
+    lsr
+    lsr
+    lsr
+    lsr
+    jsr nybbleToHex
+    sta hexStringResult
+    rts
+
+
 toScreencode
     cmp #64 ;A  
     bmi .screencodeDone       ; < A (so, must be a digit. don't change)
@@ -57,3 +88,4 @@ twoCharsToDeviceNr
 .deviceNr       !byte 0     ; temporary value. if successful, written to deviceNumber
 .deviceKey      !text "device",$9,$0
 convResult      !byte 0
+hexStringResult !fill 2     ; stores the result for converting byte values to hex strings
