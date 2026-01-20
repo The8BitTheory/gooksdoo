@@ -15,7 +15,7 @@ initPlainTextSectorParser
     lda #23
     sta linesToView
 
-    jmp initLineBuffer
+    jmp initBufferLineTable
 
 
 parseSector
@@ -75,13 +75,6 @@ readNextByteWithoutInc
     cmp #$0a    ; other line break
     beq -
 
-    ldy #0
-    sta (zp_bufferLineTable),y
-    inc zp_bufferLineTable
-    bne +
-    inc zp_bufferLineTable+1
-
-;+
     inc .lineLength
     lda .lineLength
     cmp #80
@@ -122,16 +115,11 @@ readNextByteWithoutInc
     sta .leftToParse
 
 .finishLineWithBreak
-    ldy #4
-    lda .lineLength
-    sta (zp_sectorLineTable),y
-
     inc lineCount
     bne +
     inc lineCount+1
     
-+   jsr incLineTable
-    inc parseLinePointer
++   inc parseLinePointer
 
     lda #0
     sta .lineLength
@@ -173,27 +161,41 @@ incLineTable
     lda zp_sectorLineTable
     adc #lineTableIncr
     sta zp_sectorLineTable
-    lda zp_sectorLineTable+1
-    adc #0
-    sta zp_sectorLineTable+1
-    rts
+    bcc +
+    inc zp_sectorLineTable+1
++   rts
 
-initLineBuffer
+initBufferLineTable
     lda #<lineBuffer
     sta zp_bufferLineTable
     lda #>lineBuffer
     sta zp_bufferLineTable+1
     
-    lda #0
-    sta .writeIndex
     rts
 
-initBufferTable
     
 
 ; this is used for initial display of the screen
-;sectorDataToBuffer
+sectorDataToBuffer
     ; load pointer to sectorData line from lineTable
+    ldx #2
+    ldy #0
+-   lda sectorData,x
+    sta (zp_bufferLineTable),y
+    iny
+    inx
+    beq .sectorDataCopied
+    bne -   ; as we read 254 bytes, this is always true
+
+.sectorDataCopied
+    clc
+    tya
+    adc zp_bufferLineTable
+    sta zp_bufferLineTable
+    bcc +
+    inc zp_bufferLineTable+1
++   rts
+    nop
 
 ;    lda bufferLinePointer
 ;    sta multiply16
@@ -277,14 +279,13 @@ initBufferTable
 .lineLength     !byte 0     ; used to keep track of 80 chars max per line
 .readIndex      !byte 0
 .charsSinceSpace !byte 0
-.writeIndex     !word 0
 
 .leftToParse    !byte 0     ; how many bytes in this sector are still left
 lineCount       !word 0     ; nr of total lines parsed in the file so far
 linesToView    !byte 0     ; how many lines should be viewed? (parse is always done sector-wise)
                             ; 23 for a full screen (header and footer line excluded)
                             ; or 1 if just scrolling up or down
-lineTableIncr   = 5
+lineTableIncr   = 4
 latestParsedLine   !word 0 ; how many lines of the document are available for display?
 lineBuffer      !fill 2000    ; buffer for lines spreading across sectors. used for displayLineFromCurrentSector
 bufferTable     !fill 69        ; 3 bytes per entry, 25 entries max (23, really)

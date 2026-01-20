@@ -22,10 +22,11 @@ loadSeqFileViaSectors
     ; get the first/next sector of the file
 .nextSector
     jsr doReadSector        ; writes 256 bytes to sectorData. parseSector will read from this
+                            ; we don't immediately write to lineBuffer, because of linebreaks introduced for lines longer 80
 
 ; parse it and keep parsing until we have lineTable entries for the first 25 (or 23) lines on screen
-    jsr parseSector         ; parses as many lines as the sector contains. might end with incomplete line (length $ff)
-                            ; parsing writes lineTable entries and does line-breaks correctly (not splitting words)
+    jsr parseSector         ; parsing writes lineTable entries and does line-breaks correctly (not splitting words)
+                            ; 
 
 
 ; once the sector data (lineTable and buffer) for 25 lines is in memory, display 25 lines
@@ -33,7 +34,7 @@ loadSeqFileViaSectors
 ;   sounds tedious, but being able to work with complete data (and not handle lines across sectors) is so much easier.
 ;   also: displaying 25 lines should require accessing 8 sectors max, usually only about 3-4.
     
-    ;jsr sectorDataToBuffer
+    jsr sectorDataToBuffer
     
 
     lda nextTrack

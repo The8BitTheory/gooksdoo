@@ -15,16 +15,16 @@ main
 
     jsr .printLineTableAddress
     jsr .printLineBufferAddress
-    jsr .printBufferTable
+    jsr .printLineBufferTableAddress
     
     jsr showTextfile
 ;    jsr showDirectory
 
     rts
 
-.printBufferTable
+.printLineBufferTableAddress
     jsr k_primm
-    !pet "bufferTable: ",0
+    !pet "lineBufferTable: ",0
 
     lda #>bufferTable
     jsr byteToHex
