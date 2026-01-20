@@ -9,8 +9,8 @@ c_stash_zp = $02b9
 zp_memPtr = $0a ; -$0b      ; generic memory pointer
 zp_directoryAddress = $0c ; -$0d    the address where the directory is stored
 zp_directoryBank = $0e  ; the bank where the directory is stored
-zp_lineTable = $0f ; -$10   the linetable address of the current line
-zp_lineBuffer   = $11   ; -$12  the linebuffer address of the current line
+zp_sectorLineTable = $0f ; -$10   the linetable address of the current line
+zp_bufferLineTable   = $11   ; -$12  the linebuffer address of the current line
 
 detectC128
     rts

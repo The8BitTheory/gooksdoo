@@ -1,12 +1,23 @@
 !zone loadSeq
 
+; load 23 lines:
+; - go to start sector. if not known, index sectors until it's found (eg when pressing page down)
+; - load sector     -> puts 256 bytes into sectorData (is a temporary area)
+; - index sector    -> read sectorData, write locations of line beginnings into lineTable
+;                   -> breaks lines into 80 chars max, or shorter if CR/LF is found
+; - sectorToBuffer  -> writes as many lines to the buffer as needed (eg all lines from 0-22)
+;                   -> line beginnings and lengths are written to bufferTable
+; - bufferToScreen  -> all required lines are copied to VRAM
+
 loadSeqFileViaSectors
     lda #0
     sta lastDisplayedLine
     sta lastDisplayedLine+1
 
     jsr initPlainTextSectorParser ; initializes all variables and pointers
-    jsr initLineBuffer
+    
+    lda #8
+    sta .sectorsToRead
 
     ; get the first/next sector of the file
 .nextSector
@@ -16,33 +27,24 @@ loadSeqFileViaSectors
     jsr parseSector         ; parses as many lines as the sector contains. might end with incomplete line (length $ff)
                             ; parsing writes lineTable entries and does line-breaks correctly (not splitting words)
 
+
 ; once the sector data (lineTable and buffer) for 25 lines is in memory, display 25 lines
 ;   displaying 25 lines requires re-visiting the sectors on disk.
 ;   sounds tedious, but being able to work with complete data (and not handle lines across sectors) is so much easier.
 ;   also: displaying 25 lines should require accessing 8 sectors max, usually only about 3-4.
     
-    jsr sectorDataToBuffer
+    ;jsr sectorDataToBuffer
     
-    inc bufferLinePointer
-    lda parseLinePointer
-    cmp bufferLinePointer
-;    bpl -
-
-
-    cmp parseLinePointer
-
-
-    lda linesToView
-    beq +
 
     lda nextTrack
     beq +
-
-    lda nextTrack
     sta track
     lda nextSector
     sta sector
-    jmp .nextSector
+    
+    dec .sectorsToRead
+    bne .nextSector
+    jmp +
     
 +   jsr closeSectorAccess
     
@@ -53,14 +55,15 @@ loadSeqFileViaSectors
 calcZpLineTable
     clc
     adc #<lineTable
-    sta zp_lineTable
+    sta zp_sectorLineTable
     tya
     adc #>lineTable
-    sta zp_lineTable+1
+    sta zp_sectorLineTable+1
     rts
 
 lastDisplayedLine   !word 0 ; helps comparing if we need to print more lines
 
 parseLinePointer    !word 0 ; points to the line currently parsed
 displayLinePointer  !word 0 ; points to the line currently displayed
-bufferLinePointer   !word 0 
+
+.sectorsToRead      !byte 0 

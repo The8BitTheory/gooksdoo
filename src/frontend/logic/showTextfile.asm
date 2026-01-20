@@ -26,10 +26,7 @@ showTextfile
     lda #9
     sta diskLoadDeviceNr
 
-    jsr loadSectorList
-
-
-    rts
+    jmp loadSectorList
 
 
 filename            !text "About This Serve",0

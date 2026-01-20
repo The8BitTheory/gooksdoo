@@ -2,9 +2,9 @@
 
 initPlainTextSectorParser
     lda #<lineTable
-    sta zp_lineTable
+    sta zp_sectorLineTable
     lda #>lineTable
-    sta zp_lineTable+1
+    sta zp_sectorLineTable+1
 
     lda #0
     sta latestParsedLine
@@ -14,7 +14,9 @@ initPlainTextSectorParser
 
     lda #23
     sta linesToView
-    rts
+
+    jmp initLineBuffer
+
 
 parseSector
     lda nextTrack
@@ -38,11 +40,11 @@ readNextByte
     lda sectorData,y
     inc .readIndex
     dec .leftToParse
-    bne +
-    sec
-    rts
+;    bne +
+;    sec
+;    rts
 
-+   clc
+;+   clc
     rts
 
 readNextByteWithoutInc
@@ -56,13 +58,12 @@ readNextByteWithoutInc
     bne .continueParseLine
 
     jsr .storePointerInLineTable    ; stores the start of the line (device, track, sector, y-offset)
+    jsr .writeBufferEntry
     lda #0
     sta .charsSinceSpace
 
 .continueParseLine
 -   jsr readNextByte
-    bcc +
-    jmp .doneParse
 +   cmp #' '            ; if this is a space character, we reset the counter
     bne +
     ldy #0
@@ -74,10 +75,20 @@ readNextByteWithoutInc
     cmp #$0a    ; other line break
     beq -
 
+    ldy #0
+    sta (zp_bufferLineTable),y
+    inc zp_bufferLineTable
+    bne +
+    inc zp_bufferLineTable+1
+
+;+
     inc .lineLength
     lda .lineLength
     cmp #80
     beq .finishLine
+
+    lda .leftToParse
+    beq .doneParse
 
     jmp -
 
@@ -111,15 +122,15 @@ readNextByteWithoutInc
     sta .leftToParse
 
 .finishLineWithBreak
+    ldy #4
+    lda .lineLength
+    sta (zp_sectorLineTable),y
+
     inc lineCount
     bne +
     inc lineCount+1
     
-+   ldy #4
-    lda .lineLength
-    sta (zp_lineTable),y
-
-    jsr incLineTable
++   jsr incLineTable
     inc parseLinePointer
 
     lda #0
@@ -136,135 +147,128 @@ readNextByteWithoutInc
 
 .doneParse
     rts
-
+    nop
 
 .storePointerInLineTable
     ldy #0
     lda diskLoadDeviceNr
-    sta (zp_lineTable),y
+    sta (zp_sectorLineTable),y
 
     iny
     lda track
-    sta (zp_lineTable),y
+    sta (zp_sectorLineTable),y
 
     iny
     lda sector
-    sta (zp_lineTable),y
+    sta (zp_sectorLineTable),y
 
     iny
     lda .readIndex
-    sta (zp_lineTable),y
-
-    rts
-
-
-writeToLineTable
-    ; y must be set accordingly at this point
-    sta (zp_lineTable),y
+    sta (zp_sectorLineTable),y
 
     rts
 
 incLineTable
     clc
-    lda zp_lineTable
+    lda zp_sectorLineTable
     adc #lineTableIncr
-    sta zp_lineTable
-    lda zp_lineTable+1
+    sta zp_sectorLineTable
+    lda zp_sectorLineTable+1
     adc #0
-    sta zp_lineTable+1
+    sta zp_sectorLineTable+1
     rts
 
 initLineBuffer
-    lda #<bufferTable
-    sta zp_lineBuffer
-    lda #>bufferTable
-    sta zp_lineBuffer+1
+    lda #<lineBuffer
+    sta zp_bufferLineTable
+    lda #>lineBuffer
+    sta zp_bufferLineTable+1
     
     lda #0
     sta .writeIndex
     rts
 
+initBufferTable
+    
+
 ; this is used for initial display of the screen
-sectorDataToBuffer
-    lda bufferLinePointer
-    sta multiply16
-    lda bufferLinePointer+1
-    sta multiply16+1
-    lda #lineTableIncr
-    sta multiply8
-    jsr multiply    ; result: a=lo, y=hi
+;sectorDataToBuffer
+    ; load pointer to sectorData line from lineTable
 
-    jsr calcZpLineTable
+;    lda bufferLinePointer
+;    sta multiply16
+;    lda bufferLinePointer+1
+;    sta multiply16+1
+;    lda #lineTableIncr
+;    sta multiply8
+;    jsr multiply    ; result: a=lo, y=hi
 
-.nextLineFromSectorData
-    ldy #3
-    lda (zp_lineTable),y
-    sta .readIndex
+;    jsr calcZpLineTable
+
+;.nextLineFromSectorData
+;    ldy #3
+;    lda (zp_sectorLineTable),y
+;    sta .readIndex
     
-    iny
-    lda (zp_lineTable),y
-    tax ; line length
-    stx .lineLength
+;    iny
+;    lda (zp_sectorLineTable),y
+;    tax ; line length
+;    stx .lineLength
 
-    jsr .writeBufferEntry
+;    jsr .writeBufferEntry
 
--   ldy .readIndex
-    lda sectorData,y
+;-   ldy .readIndex
+;    lda sectorData,y
     
-    ldy .writeIndex
-    sta lineBuffer,y
+;    ldy .writeIndex
+;    sta lineBuffer,y
     
-    inc .writeIndex
-    bne +
-    inc .writeIndex+1
+;    inc .writeIndex
+;    bne +
+;    inc .writeIndex+1
 
-+   inc .readIndex
-    beq +       ; .readIndex is running over. sector data is at an end
-    dec .lineLength
-    bne -
+;+   inc .readIndex
+;    beq +       ; .readIndex is running over. sector data is at an end
+;    dec .lineLength
+;    bne -
     ;jsr .writeBufferEntry
-    jmp .nextLineFromSectorData
+;    jmp .nextLineFromSectorData
 
-    lda #$0d
-    jsr chrout
+;    lda #$0d
+;    jsr chrout
 
-+   rts
-    nop
+;+   rts
+;    nop
 
 .writeBufferEntry
-    ldy #0
-    lda .writeIndex
-    sta (zp_lineBuffer),y
+    ldy bufferTablePosition
+
+    lda zp_bufferLineTable
+    sta bufferTable,y
     
     iny
-    lda .writeIndex+1
-    sta (zp_lineBuffer),y
+    lda zp_bufferLineTable+1
+    sta bufferTable,y
 
     iny
     lda .lineLength
-    sta (zp_lineBuffer),y
+    sta bufferTable,y
 
 ; increase line-buffer pointer by 3 (write entry)
-    clc
-    lda zp_lineBuffer
-    adc #3
-    sta zp_lineBuffer
-    lda zp_lineBuffer+1
-    adc #0
-    sta zp_lineBuffer+1
+;    clc
+;    lda zp_bufferLineTable
+;    adc #3
+;    sta zp_bufferLineTable
+;    lda zp_bufferLineTable+1
+;    adc #0
+;    sta zp_bufferLineTable+1
 
 ; increase line-table pointer by 5 (read entry)
-    clc
-    lda zp_lineTable
-    adc #lineTableIncr
-    sta zp_lineTable
-    lda zp_lineTable+1
-    adc #0
-    sta zp_lineTable+1
+    jsr incLineTable
 
-    inc bufferLinePointer
+    inc bufferTablePosition
     bne +
-    inc bufferLinePointer+1
+    inc bufferTablePosition+1
 
 +   rts
 
@@ -284,3 +288,5 @@ lineTableIncr   = 5
 latestParsedLine   !word 0 ; how many lines of the document are available for display?
 lineBuffer      !fill 2000    ; buffer for lines spreading across sectors. used for displayLineFromCurrentSector
 bufferTable     !fill 69        ; 3 bytes per entry, 25 entries max (23, really)
+
+bufferTablePosition !byte 0

@@ -1,6 +1,8 @@
 
 !src <cbm/c128/vdc.a>
 
+k_primm = $ff7d
+
 *=$1c01
 !byte $0c,$1c,$b5,$07,$9e,$20,$37,$31,$38,$32,$00,$00,$00
 ;jmp main
@@ -12,12 +14,55 @@ main
     jsr chrout
 
     jsr .printLineTableAddress
+    jsr .printLineBufferAddress
+    jsr .printBufferTable
+    
     jsr showTextfile
 ;    jsr showDirectory
 
     rts
 
+.printBufferTable
+    jsr k_primm
+    !pet "bufferTable: ",0
+
+    lda #>bufferTable
+    jsr byteToHex
+    lda hexStringResult
+    jsr chrout
+    lda hexStringResult+1
+    jsr chrout
+    lda #<bufferTable
+    jsr byteToHex
+    lda hexStringResult
+    jsr chrout
+    lda hexStringResult+1
+    jsr chrout
+    lda #$0d
+    jmp chrout
+.printLineBufferAddress
+    jsr k_primm
+    !pet "lineBuffer: ",0
+
+    lda #>lineBuffer
+    jsr byteToHex
+    lda hexStringResult
+    jsr chrout
+    lda hexStringResult+1
+    jsr chrout
+    lda #<lineBuffer
+    jsr byteToHex
+    lda hexStringResult
+    jsr chrout
+    lda hexStringResult+1
+    jsr chrout
+    lda #$0d
+    jmp chrout
+
 .printLineTableAddress
+    jsr k_primm
+    !pet "lineTable: ",0
+
     lda #>lineTable
     jsr byteToHex
     lda hexStringResult
@@ -29,9 +74,9 @@ main
     lda hexStringResult
     jsr chrout
     lda hexStringResult+1
+    jsr chrout
+    lda #$0d
     jmp chrout
-
-
 
 !src "src/system/c128.asm"
 !src "src/converters/converters.asm"
