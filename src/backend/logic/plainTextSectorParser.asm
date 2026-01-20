@@ -18,7 +18,8 @@ initPlainTextSectorParser
     jmp initBufferLineTable
 
 
-parseSector
+; this indices the lines of the sector for 80 chars max per line.
+indexSectorWrapped
     lda nextTrack
     beq +       ; if zero: last sector of file. .nextSector contains nr of bytes in this sector
     ldx #$fe    ; not zero. sector contains 254 bytes
@@ -40,11 +41,6 @@ readNextByte
     lda sectorData,y
     inc .readIndex
     dec .leftToParse
-;    bne +
-;    sec
-;    rts
-
-;+   clc
     rts
 
 readNextByteWithoutInc
@@ -167,9 +163,9 @@ incLineTable
 
 initBufferLineTable
     lda #<lineBuffer
-    sta zp_bufferLineTable
+    sta zp_lineBufferPos
     lda #>lineBuffer
-    sta zp_bufferLineTable+1
+    sta zp_lineBufferPos+1
     
     rts
 
@@ -181,7 +177,8 @@ sectorDataToBuffer
     ldx #2
     ldy #0
 -   lda sectorData,x
-    sta (zp_bufferLineTable),y
+; TODO: here we'll need to check for linebreaks and exceeded line length
+    sta (zp_lineBufferPos),y
     iny
     inx
     beq .sectorDataCopied
@@ -190,10 +187,10 @@ sectorDataToBuffer
 .sectorDataCopied
     clc
     tya
-    adc zp_bufferLineTable
-    sta zp_bufferLineTable
+    adc zp_lineBufferPos
+    sta zp_lineBufferPos
     bcc +
-    inc zp_bufferLineTable+1
+    inc zp_lineBufferPos+1
 +   rts
     nop
 
@@ -245,11 +242,11 @@ sectorDataToBuffer
 .writeBufferEntry
     ldy bufferTablePosition
 
-    lda zp_bufferLineTable
+    lda zp_lineBufferPos
     sta bufferTable,y
     
     iny
-    lda zp_bufferLineTable+1
+    lda zp_lineBufferPos+1
     sta bufferTable,y
 
     iny

@@ -74,12 +74,12 @@ displayLineFromCurrentSector
     jsr calcZpLineTable
 
     ldy #3
-    lda (zp_bufferLineTable),y
+    lda (zp_lineBufferPos),y
     pha
     ;sta .lineStart
     
     iny
-    lda (zp_bufferLineTable),y
+    lda (zp_lineBufferPos),y
     tax
     ;sta .lineLength
 
