@@ -17,7 +17,7 @@ loadSeqFileViaSectors
 
     jsr initPlainTextSectorParser ; initializes all variables and pointers
     
-    lda #8
+    lda #7
     sta .sectorsToRead
 
     ; get the first/next sector of the file
@@ -30,10 +30,7 @@ loadSeqFileViaSectors
                             ; 
 
 
-; once the sector data (lineTable and buffer) for 25 lines is in memory, display 25 lines
-;   displaying 25 lines requires re-visiting the sectors on disk.
-;   sounds tedious, but being able to work with complete data (and not handle lines across sectors) is so much easier.
-;   also: displaying 25 lines should require accessing 8 sectors max, usually only about 3-4.
+
     
     jsr sectorDataToBuffer
     
@@ -49,6 +46,11 @@ loadSeqFileViaSectors
     jmp +
     
 +   jsr closeSectorAccess
+
+; once the sector data (lineTable and buffer) for 25 lines is in memory, display 25 lines
+;   displaying 25 lines requires re-visiting the sectors on disk.
+;   sounds tedious, but being able to work with complete data (and not handle lines across sectors) is so much easier.
+;   also: displaying 25 lines should require accessing 8 sectors max, usually only about 3-4.
     
     nop
     nop
