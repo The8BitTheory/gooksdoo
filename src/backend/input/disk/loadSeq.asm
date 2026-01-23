@@ -16,7 +16,8 @@ loadSeqFileViaSectors
     sta lastDisplayedLine+1
 
     jsr initPlainTextSectorParser ; initializes all variables and pointers
-    
+    jsr initBufferLineTable
+
     lda #7
     sta .sectorsToRead
 
@@ -28,13 +29,8 @@ loadSeqFileViaSectors
 ; parse it and keep parsing until we have lineTable entries for the first 25 (or 23) lines on screen
     jsr indexSectorWrapped  ; parsing writes lineTable entries and does line-breaks correctly (not splitting words)
                             ; 
-
-
-
-    
     jsr sectorDataToBuffer
     
-
     lda nextTrack
     beq +
     sta track
@@ -46,6 +42,8 @@ loadSeqFileViaSectors
     jmp +
     
 +   jsr closeSectorAccess
+
+    ;jsr indexBufferWrapped
 
 ; once the sector data (lineTable and buffer) for 25 lines is in memory, display 25 lines
 ;   displaying 25 lines requires re-visiting the sectors on disk.

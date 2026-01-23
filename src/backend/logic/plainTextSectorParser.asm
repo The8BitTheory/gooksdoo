@@ -7,30 +7,37 @@ initPlainTextSectorParser
     sta zp_sectorLineTable+1
 
     lda #0
-    sta latestParsedLine
-    sta latestParsedLine+1
     sta parseLinePointer
     sta parseLinePointer+1
 
     lda #23
     sta linesToView
-
-    jmp initBufferLineTable
+    rts
 
 
 ; this indices the lines of the sector for 80 chars max per line.
 indexSectorWrapped
+    lda #<sectorData
+    sta zp_indexPtr
+    lda #>sectorData
+    sta zp_indexPtr+1
+
+    lda #<.storePointerInLineTable
+    sta .storePointerTarget
+    lda #>.storePointerInLineTable
+    sta .storePointerTarget+1
+
     lda nextTrack
     beq +       ; if zero: last sector of file. .nextSector contains nr of bytes in this sector
     ldx #$fe    ; not zero. sector contains 254 bytes
     jmp ++
 +   ldx nextSector
     
-++  stx .leftToParse
+++  stx .leftToIndex
     ldy #2
     sty .readIndex
 -   jsr .parseLine
-    ldy .leftToParse
+    ldy .leftToIndex
     beq +
     bne -
 
@@ -38,26 +45,41 @@ indexSectorWrapped
 
 readNextByte
     ldy .readIndex
-    lda sectorData,y
+    lda (zp_indexPtr),y ; was: sectorData,y
     inc .readIndex
-    dec .leftToParse
+    dec .leftToIndex
     rts
 
 readNextByteWithoutInc
     ldy .readIndex
-    lda sectorData,y
+    lda (zp_indexPtr),y ; was: sectorData,y
     rts
+
+.storePointer
+    jmp (.storePointerTarget)
 
 ; each line takes 3 bytes in the lineTable. 2 bytes for pointer, 1 byte for line length
 .parseLine
     lda .lineLength
     bne .continueParseLine
 
-    jsr .storePointerInLineTable    ; stores the start of the line (device, track, sector, y-offset)
-    jsr .writeBufferEntryPosition
-
     lda #0
     sta .charsSinceSpace
+
+    ;jsr .storePointerInLineTable    ; stores the start of the line (device, track, sector, y-offset)
+    jsr .storePointer
+
+;    ldy .readIndex
+;    dey
+;    dey
+;    tya
+;    clc
+;    adc zp_lineBufferPos
+;    sta zp_lineBufferPos
+;    bcc +
+;    inc zp_lineBufferPos+1
+;+   jsr .writeBufferEntryPosition
+
 
 .continueParseLine
 -   jsr readNextByte
@@ -77,7 +99,7 @@ readNextByteWithoutInc
     cmp #80
     beq .finishLine
 
-    lda .leftToParse
+    lda .leftToIndex
     beq .doneParse
 
     jmp -
@@ -107,28 +129,18 @@ readNextByteWithoutInc
     sta .readIndex
 
     clc
-    lda .leftToParse
+    lda .leftToIndex
     adc .charsSinceSpace
-    sta .leftToParse
+    sta .leftToIndex
 
 .finishLineWithBreak
     inc lineCount
-    bne +
-    inc lineCount+1
     
-+   inc parseLinePointer
-
-    jsr .writeBufferEntryLength
-
     lda #0
     sta .lineLength
     sta .charsSinceSpace
 
-    inc latestParsedLine
-    bne +
-    inc latestParsedLine+1
-
-+   lda .leftToParse
+    lda .leftToIndex
     beq .doneParse
     jmp .parseLine
 
@@ -153,11 +165,6 @@ readNextByteWithoutInc
     lda .readIndex
     sta (zp_sectorLineTable),y
     
-; increase line-table pointer by 5 (read entry)
-    jsr incLineTable
-
-    rts
-
 incLineTable
     clc
     lda zp_sectorLineTable
@@ -175,30 +182,17 @@ initBufferLineTable
     
     rts
 
-    
-
-; this is used for initial display of the screen
 sectorDataToBuffer
-    ; load pointer to sectorData line from lineTable
     ldx #2
     ldy #0
 -   lda sectorData,x
-
-; TODO: here we'll need to check for linebreaks and exceeded line length
-
-
-
     sta (zp_lineBufferPos),y
     iny
     inx
-    beq .copyLineTableIndices
-    bne -   ; as we read 254 bytes, this is always true
+    beq +
+    bne -   ; as we read only 254 bytes, this is always true
 
-.copyLineTableIndices
-; this takes the lineTable entries of this sector and translates them into indices for the buffer.
-
-.sectorDataCopied
-    clc
++   clc
     tya
     adc zp_lineBufferPos
     sta zp_lineBufferPos
@@ -207,50 +201,37 @@ sectorDataToBuffer
 +   rts
     nop
 
-;    lda bufferLinePointer
-;    sta multiply16
-;    lda bufferLinePointer+1
-;    sta multiply16+1
-;    lda #lineTableIncr
-;    sta multiply8
-;    jsr multiply    ; result: a=lo, y=hi
+indexBufferWrapped
+    ldy lineCount
+    sty .nrBufferEntries
 
-;    jsr calcZpLineTable
+    jsr initBufferLineTable
 
-;.nextLineFromSectorData
-;    ldy #3
-;    lda (zp_sectorLineTable),y
-;    sta .readIndex
-    
-;    iny
-;    lda (zp_sectorLineTable),y
-;    tax ; line length
-;    stx .lineLength
+    lda #<lineBuffer
+    sta zp_indexPtr
+    lda #>lineBuffer
+    sta zp_indexPtr+1
 
-;    jsr .writeBufferEntry
+    lda #<.writeBufferEntryPosition
+    sta .storePointerTarget
+    lda #>.writeBufferEntryPosition
+    sta .storePointerTarget+1
 
-;-   ldy .readIndex
-;    lda sectorData,y
-    
-;    ldy .writeIndex
-;    sta lineBuffer,y
-    
-;    inc .writeIndex
-;    bne +
-;    inc .writeIndex+1
+    ldy #0
+    sty .readIndex
+-   jsr .parseLine
 
-;+   inc .readIndex
-;    beq +       ; .readIndex is running over. sector data is at an end
-;    dec .lineLength
-;    bne -
-    ;jsr .writeBufferEntry
-;    jmp .nextLineFromSectorData
+    dec .nrBufferEntries
+    beq +
+    bne -
 
-;    lda #$0d
-;    jsr chrout
++   rts
 
-;+   rts
-;    nop
+
+    rts
+    nop
+
+
 
 .writeBufferEntryPosition
     lda bufferTablePosition
@@ -267,19 +248,6 @@ sectorDataToBuffer
 
     rts
 
-;    iny
-;    lda .lineLength
-;    sta bufferTable,y
-
-; increase line-buffer pointer by 3 (write entry)
-;    clc
-;    lda zp_bufferLineTable
-;    adc #3
-;    sta zp_bufferLineTable
-;    lda zp_bufferLineTable+1
-;    adc #0
-;    sta zp_bufferLineTable+1
-
 .writeBufferEntryLength
     lda bufferTablePosition
     asl
@@ -291,26 +259,28 @@ sectorDataToBuffer
     sta bufferTable,y
     
     inc bufferTablePosition
-    bne +
-    inc bufferTablePosition+1
 
-+   rts
+    rts
 
 
+.storePointerTarget !word 0
 .temp4          !word 0,0
 .lineLength     !byte 0     ; used to keep track of 80 chars max per line
 .readIndex      !byte 0     ; the lineNr of the current sector we're reading
 .charsSinceSpace !byte 0
 
-.leftToParse    !byte 0     ; how many bytes in this sector are still left
-lineCount       !word 0     ; nr of total lines parsed in the file so far
+.leftToIndex    !byte 0     ; how many bytes in this sector are still left
+
+lineCount       !byte 0     ; nr of lines indexed from sectors (used to index buffer as a countdown)
+
 linesToView    !byte 0     ; how many lines should be viewed? (parse is always done sector-wise)
                             ; 23 for a full screen (header and footer line excluded)
                             ; or 1 if just scrolling up or down
 lineTableIncr   = 4
-latestParsedLine   !word 0 ; how many lines of the document are available for display?
 lineBuffer      !fill 2000    ; buffer for lines spreading across sectors. used for displayLineFromCurrentSector
-bufferTable     !fill 69        ; 3 bytes per entry, 25 entries max (23, really)
+bufferTable     !fill 255       ; 3 bytes per entry, 25 entries max (23, really). 255 bytes make room for 85 entries
+.nrBufferEntries    !byte 0
 
 bufferTablePosition !byte 0 ; the lineNr of the buffer we're writing
+
 
