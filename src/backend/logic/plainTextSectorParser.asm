@@ -23,9 +23,9 @@ indexSectorWrapped
     sta zp_indexPtr+1
 
     lda #<.storePointerInLineTable
-    sta .storePointerTarget
+    sta zp_jumpTarget
     lda #>.storePointerInLineTable
-    sta .storePointerTarget+1
+    sta zp_jumpTarget+1
 
     lda nextTrack
     beq +       ; if zero: last sector of file. .nextSector contains nr of bytes in this sector
@@ -56,7 +56,7 @@ readNextByteWithoutInc
     rts
 
 .storePointer
-    jmp (.storePointerTarget)
+    jmp (zp_jumpTarget)
 
 ; each line takes 3 bytes in the lineTable. 2 bytes for pointer, 1 byte for line length
 .parseLine
@@ -202,9 +202,6 @@ sectorDataToBuffer
     nop
 
 indexBufferWrapped
-    ldy lineCount
-    sty .nrBufferEntries
-
     jsr initBufferLineTable
 
     lda #<lineBuffer
@@ -213,15 +210,16 @@ indexBufferWrapped
     sta zp_indexPtr+1
 
     lda #<.writeBufferEntryPosition
-    sta .storePointerTarget
+    sta zp_jumpTarget
     lda #>.writeBufferEntryPosition
-    sta .storePointerTarget+1
+    sta zp_jumpTarget+1
 
     ldy #0
     sty .readIndex
 -   jsr .parseLine
-
-    dec .nrBufferEntries
+    ldy .leftToIndex+1
+    bne -
+    ldy .leftToIndex
     beq +
     bne -
 
@@ -263,7 +261,6 @@ indexBufferWrapped
     rts
 
 
-.storePointerTarget !word 0
 .temp4          !word 0,0
 .lineLength     !byte 0     ; used to keep track of 80 chars max per line
 .readIndex      !byte 0     ; the lineNr of the current sector we're reading

@@ -12,6 +12,7 @@ zp_directoryBank = $0e  ; the bank where the directory is stored
 zp_sectorLineTable = $0f ; -$10   the linetable address of the current line
 zp_lineBufferPos   = $11   ; -$12  the linebuffer address of the current line
 zp_indexPtr     = $13 ; -$14    used to read data from either sectorData or lineBuffer
+zp_jumpTarget   = $15 ; -$16    
 
 detectC128
     rts

@@ -28,7 +28,7 @@ loadSeqFileViaSectors
 
 ; parse it and keep parsing until we have lineTable entries for the first 25 (or 23) lines on screen
     jsr indexSectorWrapped  ; parsing writes lineTable entries and does line-breaks correctly (not splitting words)
-                            ; 
+
     jsr sectorDataToBuffer
     
     lda nextTrack
