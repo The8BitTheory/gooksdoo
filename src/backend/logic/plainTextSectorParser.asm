@@ -27,6 +27,12 @@ indexSectorWrapped
     lda #>.storePointerInLineTable
     sta zp_jumpTarget+1
 
+    lda #0
+    sta .leftToIndex+1
+
+    lda #$ff
+    sta .indexLength
+
     lda nextTrack
     beq +       ; if zero: last sector of file. .nextSector contains nr of bytes in this sector
     ldx #$fe    ; not zero. sector contains 254 bytes
@@ -46,8 +52,17 @@ indexSectorWrapped
 readNextByte
     ldy .readIndex
     lda (zp_indexPtr),y ; was: sectorData,y
+    tay
     inc .readIndex
-    dec .leftToIndex
+    bne +
+    inc zp_indexPtr+1
++   sec
+    lda .leftToIndex
+    sbc #1
+    sta .leftToIndex
+    bcs +
+    dec .leftToIndex+1
++   tya
     rts
 
 readNextByteWithoutInc
@@ -69,18 +84,6 @@ readNextByteWithoutInc
     ;jsr .storePointerInLineTable    ; stores the start of the line (device, track, sector, y-offset)
     jsr .storePointer
 
-;    ldy .readIndex
-;    dey
-;    dey
-;    tya
-;    clc
-;    adc zp_lineBufferPos
-;    sta zp_lineBufferPos
-;    bcc +
-;    inc zp_lineBufferPos+1
-;+   jsr .writeBufferEntryPosition
-
-
 .continueParseLine
 -   jsr readNextByte
 +   cmp #' '            ; if this is a space character, we reset the counter
@@ -99,6 +102,8 @@ readNextByteWithoutInc
     cmp #80
     beq .finishLine
 
+    lda .leftToIndex+1
+    bne -
     lda .leftToIndex
     beq .doneParse
 
@@ -132,15 +137,24 @@ readNextByteWithoutInc
     lda .leftToIndex
     adc .charsSinceSpace
     sta .leftToIndex
+    bcc .finishLineWithBreak
+    inc .leftToIndex+1
 
 .finishLineWithBreak
     inc lineCount
+
+    lda .indexLength
+    bmi +
+    jsr .writeBufferEntryLength
     
-    lda #0
++   lda #0
     sta .lineLength
     sta .charsSinceSpace
 
-    lda .leftToIndex
+    lda .leftToIndex+1
+    beq +
+    jmp .parseLine
++   lda .leftToIndex
     beq .doneParse
     jmp .parseLine
 
@@ -201,6 +215,9 @@ sectorDataToBuffer
 +   rts
     nop
 
+; this is called when all sectors are written to the buffer
+; does the same what indexSectorWrapped did, but for the 2k buffer.
+; in addition, it keeps the line lengths
 indexBufferWrapped
     jsr initBufferLineTable
 
@@ -214,7 +231,14 @@ indexBufferWrapped
     lda #>.writeBufferEntryPosition
     sta zp_jumpTarget+1
 
+    lda #<2000
+    sta .leftToIndex
+    lda #>2000
+    sta .leftToIndex+1
+
     ldy #0
+    sty .lineLength
+    sty .indexLength
     sty .readIndex
 -   jsr .parseLine
     ldy .leftToIndex+1
@@ -237,11 +261,14 @@ indexBufferWrapped
     adc bufferTablePosition
     tay
 
+    clc
     lda zp_lineBufferPos
+    adc .readIndex
     sta bufferTable,y
     
     iny
     lda zp_lineBufferPos+1
+    adc #0
     sta bufferTable,y
 
     rts
@@ -265,8 +292,9 @@ indexBufferWrapped
 .lineLength     !byte 0     ; used to keep track of 80 chars max per line
 .readIndex      !byte 0     ; the lineNr of the current sector we're reading
 .charsSinceSpace !byte 0
+.indexLength    !byte 0     ; positive if length of line is to be indexed (buffer). negative if not (sectors)
 
-.leftToIndex    !byte 0     ; how many bytes in this sector are still left
+.leftToIndex    !word 0     ; how many bytes in this sector are still left
 
 lineCount       !byte 0     ; nr of lines indexed from sectors (used to index buffer as a countdown)
 

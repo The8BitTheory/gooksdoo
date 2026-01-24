@@ -130,7 +130,7 @@ A_to_vdc_data ; write A to currently selected VDC register
 .lineNr     !byte 0
 .counter    !byte 0
 .lineStart  !byte 0
-.lineLength !byte 0
+;.lineLength !byte 0
 
 
 screenLineOffset   !word   0,  80, 160, 240, 320, 400, 480, 560, 640, 720, 800, 880

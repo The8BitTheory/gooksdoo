@@ -43,7 +43,7 @@ loadSeqFileViaSectors
     
 +   jsr closeSectorAccess
 
-    ;jsr indexBufferWrapped
+    jsr indexBufferWrapped
 
 ; once the sector data (lineTable and buffer) for 25 lines is in memory, display 25 lines
 ;   displaying 25 lines requires re-visiting the sectors on disk.
