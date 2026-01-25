@@ -82,8 +82,7 @@ readNextByteWithoutInc
     lda #0
     sta .charsSinceSpace
 
-    ;jsr .storePointerInLineTable    ; stores the start of the line (device, track, sector, y-offset)
-    jsr .storePointer
+    jsr .storePointer               ; stores either sector or buffer linestart
 
 .continueParseLine
 -   jsr readNextByte
@@ -93,13 +92,14 @@ readNextByteWithoutInc
     sty .charsSinceSpace ; y should be zero because it was set in readNextByte
 +   inc .charsSinceSpace
     
+    ; we handle CR and CRLF
     cmp #$0d    ;line break?
     bne +
-    jsr readNextByteWithoutInc
-    cmp #$0a    ; other line break
-    bne .finishLineWithBreak
-    jsr readNextByte
-    jmp .finishLineWithBreak
+    jsr readNextByteWithoutInc      ; peek into the next char without increasing readIndex
+    cmp #$0a                        ; other line break found?
+    bne .finishLineWithBreak        ; no. handle linebreak at this position
+    jsr readNextByte                ; yes. read with readIndex increment. ie just skip the LF
+    jmp .finishLineWithBreak        ; and now handle the linebreak
 
 +   inc .lineLength
     lda .lineLength
@@ -266,12 +266,12 @@ indexBufferWrapped
     tay
 
     clc
-    lda zp_lineBufferPos
+    lda zp_indexPtr
     adc .readIndex
     sta bufferTable,y
     
     iny
-    lda zp_lineBufferPos+1
+    lda zp_indexPtr+1
     adc #0
     sta bufferTable,y
 
