@@ -13,6 +13,7 @@ main
     lda #14
     jsr chrout
 
+    jsr .printSectorDataAddress
     jsr .printLineTableAddress
     jsr .printLineBufferAddress
     jsr .printLineBufferTableAddress
@@ -22,9 +23,28 @@ main
 
     rts
 
+.printSectorDataAddress
+    jsr k_primm
+    !pet "sectorData: $",0
+
+    lda #>sectorData
+    jsr byteToHex
+    lda hexStringResult
+    jsr chrout
+    lda hexStringResult+1
+    jsr chrout
+    lda #<sectorData
+    jsr byteToHex
+    lda hexStringResult
+    jsr chrout
+    lda hexStringResult+1
+    jsr chrout
+    lda #$0d
+    jmp chrout
+
 .printLineBufferTableAddress
     jsr k_primm
-    !pet "lineBufferTable: ",0
+    !pet "lineBufferTable: $",0
 
     lda #>bufferTable
     jsr byteToHex
@@ -40,9 +60,10 @@ main
     jsr chrout
     lda #$0d
     jmp chrout
+
 .printLineBufferAddress
     jsr k_primm
-    !pet "lineBuffer: ",0
+    !pet "lineBuffer: $",0
 
     lda #>lineBuffer
     jsr byteToHex
@@ -61,7 +82,7 @@ main
 
 .printLineTableAddress
     jsr k_primm
-    !pet "lineTable: ",0
+    !pet "lineTable: $",0
 
     lda #>lineTable
     jsr byteToHex

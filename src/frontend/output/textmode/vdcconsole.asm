@@ -63,6 +63,54 @@ printDirectory
     bne -
     rts
 
+displayBuffer
+
+    ldx #23
+    stx .lineNr
+    ldx #0
+
+.displayLine
+    lda bufferTable,x
+    sta zp_lineBufferPos
+    inx
+    lda bufferTable,x
+    sta zp_lineBufferPos+1
+    inx
+    lda bufferTable,x
+    sta .displayLength
+    inx
+
+    cmp #0
+    beq .lineFeed
+
+.displayChar
+    ldy #0
+-   lda (zp_lineBufferPos),y
+    jsr chrout
+    iny
+    dec .displayLength
+    bne -
+
+.lineFeed
+    lda #$0d
+    jsr chrout
+
+    stx .tempX
+    sty .tempY
+
+-   jsr k_getin
+    beq -
+    cmp #$03
+    beq +
+
+    ldx .tempX
+    ldy .tempY
+
+    dec .lineNr
+    bne .displayLine
+
++   rts
+
 displayLineFromCurrentSector
     lda lastDisplayedLine
     sta multiply16
@@ -130,7 +178,9 @@ A_to_vdc_data ; write A to currently selected VDC register
 .lineNr     !byte 0
 .counter    !byte 0
 .lineStart  !byte 0
-;.lineLength !byte 0
+.displayLength !byte 0
+.tempX      !byte 0
+.tempY      !byte 0
 
 
 screenLineOffset   !word   0,  80, 160, 240, 320, 400, 480, 560, 640, 720, 800, 880

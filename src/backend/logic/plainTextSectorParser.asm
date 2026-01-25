@@ -29,6 +29,7 @@ indexSectorWrapped
 
     lda #0
     sta .leftToIndex+1
+    sta .lineLength
 
     lda #$ff
     sta .indexLength

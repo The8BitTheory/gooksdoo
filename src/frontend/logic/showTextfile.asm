@@ -26,7 +26,9 @@ showTextfile
     lda #9
     sta diskLoadDeviceNr
 
-    jmp loadSectorList
+    jsr loadSectorList
+
+    jmp displayBuffer
 
 
 filename            !text "About This Serve",0

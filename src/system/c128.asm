@@ -1,6 +1,8 @@
 !zone c128
 
 ; zero page addresses. we use $0a-$8f ($7a and up is used by vdc-basic)
+k_getin = $eeeb
+
 c_fetch = $02a2
 c_fetch_zp = $02aa
 c_stash = $02af
