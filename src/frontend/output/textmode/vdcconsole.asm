@@ -40,6 +40,46 @@ home
     +setCursorXY 0,0
     rts
 
+; fills screen-ram with 0 and attribute-ram with second charset, fc white, bc black
+clearScreen
+    jsr setBlockFill
+
+    ; screen ram ($0000)
+    lda #$20    ;white foreground, charset 1 (upper/lower)
+    ldy #0
+    ldx #0
+    jsr A_to_vram_XXYY  ; write first byte
+
+    ; 2000 bytes ($07d0)
+    lda #$d0    ;lowbyte
+    ldy #$07    ;highbyte
+    jsr vdc_do_YYAA_cycles
+
+    ; attribute ram ($0800)
+    lda #$8f    ;white foreground, charset 1 (upper/lower)
+    ldy #00
+    ldx #08
+    jsr A_to_vram_XXYY  ; write first byte
+
+    ; 2000 bytes ($07d0)
+    lda #$d0    ;lowbyte
+    ldy #$07    ;highbyte
+    jmp vdc_do_YYAA_cycles
+
+
+; set lines 1 - 23 to charset1, text black data
+; screen-ram
+    lda #%10000000
+    ldy #$50
+    ldx #$08
+    jsr A_to_vram_XXYY
+
+    ;set count
+    lda #$2f    ;lowbyte
+    ldy #$07    ;highbyte
+    jmp vdc_do_YYAA_cycles
+    rts
+
 printDirectory
     jsr home
 
@@ -68,11 +108,12 @@ printDirectory
     rts
 
 displayBuffer
+    jsr clearScreen
     jsr home
 
-    ldx #23
+    ldx #1
     stx .lineNr
-    ldx #0
+    dex
 
 .displayLine
     lda bufferTable,x
@@ -97,11 +138,25 @@ displayBuffer
     bne -
 
 .lineFeed
-    lda #$0d
-    jsr chrout
-
     stx .tempX
     sty .tempY
+
+; set vram pointer to beginning of next line
+    ldx #0
+    lda .lineNr
+    asl
+    tay
+
+    lda screenLineOffset,y  ; lb. needed in Y
+    pha
+    iny
+    lda screenLineOffset,y  ; hb. needed in A
+    tax
+    pla
+    tay
+    txa
+
+    jsr AY_to_vdc_regs_18_19
 
 -   jsr k_getin
     beq -
@@ -111,7 +166,9 @@ displayBuffer
     ldx .tempX
     ldy .tempY
 
-    dec .lineNr
+    inc .lineNr
+    lda .lineNr
+    cmp #24
     bne .displayLine
 
 +   rts
@@ -144,6 +201,42 @@ A_to_vdc_data ; write A to currently selected VDC register
 		+vdc_sta
 		rts
 
+A_to_vram_XXYY
+		pha
+		txa
+		jsr AY_to_vdc_regs_18_19
+		ldx #31
+		pla
+		jmp A_to_vdc_reg_X
+
+setBlockFill
+    ; clear BLOCK COPY register bit to get BLOCK FILL
+    ldx #24
+    jsr vdc_reg_X_to_A
+    and #$7f
+    jmp A_to_vdc_reg_X
+
+setBlockCopy
+    ; set BLOCK COPY register bit to get BLOCK COPY
+    ldx #24
+    jsr vdc_reg_X_to_A
+    ora #128
+    jmp A_to_vdc_reg_X
+
+vdc_do_YYAA_cycles
+		ldx #30	; cycle register
+		stx vdc_reg
+		tax	; check low byte
+		beq +
+			+vdc_sta	; copy/write partial page
++		tya	; check high byte
+		beq +
+			; copy/write whole pages
+			lda #0
+-				+vdc_sta
+				dey
+				bne -
++		rts
 
 .lineNr     !byte 0
 .counter    !byte 0
