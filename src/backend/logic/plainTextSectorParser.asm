@@ -87,18 +87,21 @@ readNextByteWithoutInc
 
 .continueParseLine
 -   jsr readNextByte
-+   cmp #' '            ; if this is a space character, we reset the counter
+    cmp #' '            ; if this is a space character, we reset the counter
     bne +
     ldy #0
     sty .charsSinceSpace ; y should be zero because it was set in readNextByte
 +   inc .charsSinceSpace
     
     cmp #$0d    ;line break?
-    beq .finishLineWithBreak
+    bne +
+    jsr readNextByteWithoutInc
     cmp #$0a    ; other line break
-    beq -
+    bne .finishLineWithBreak
+    jsr readNextByte
+    jmp .finishLineWithBreak
 
-    inc .lineLength
++   inc .lineLength
     lda .lineLength
     cmp #80
     beq .finishLine
