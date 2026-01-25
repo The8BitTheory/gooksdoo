@@ -8,6 +8,11 @@ k_primm = $ff7d
 ;jmp main
 
 main
+    lda #09
+    sta $ba ; set devicenr to 9
+    jsr disableBasicRom
+    jsr initVdcTextmode
+
     lda #$0d
     jsr chrout
     lda #14
@@ -21,7 +26,8 @@ main
     jsr showTextfile
 ;    jsr showDirectory
 
-    rts
+    jmp setBank15
+    
 
 .printSectorDataAddress
     jsr k_primm
@@ -104,6 +110,7 @@ main
 !src "src/converters/calculators.asm"
 !src "src/converters/decHelper.asm"
 !src "src/backend/input/disk/commonDisk.asm"
+!src "src/backend/input/disk/loadCharset.asm"
 !src "src/backend/input/disk/loadDir.asm"
 !src "src/backend/input/disk/loadSeq.asm"
 !src "src/backend/input/disk/loadSectorList.asm"
@@ -111,6 +118,7 @@ main
 !src "src/frontend/output/textmode/vdcconsole.asm"
 !src "src/frontend/logic/showDirectory.asm"
 !src "src/frontend/logic/showTextfile.asm"
+!src "src/frontend/output/textmode/initVdcText.asm"
 
 ; a lineTable entry is a pointer into raw content to form a displayable line.
 ; lines can be 80 chars max

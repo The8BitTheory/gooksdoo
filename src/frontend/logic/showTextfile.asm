@@ -31,5 +31,5 @@ showTextfile
     jmp displayBuffer
 
 
-filename            !text "About This Serve",0
-filenameLength      !byte 16
+;filename            !text "About This Serve",0
+;filenameLength      !byte 16

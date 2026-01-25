@@ -36,8 +36,12 @@
 +
 }
 
-printDirectory
+home
     +setCursorXY 0,0
+    rts
+
+printDirectory
+    jsr home
 
     lda #$7f
     sta zp_directoryBank
@@ -64,6 +68,7 @@ printDirectory
     rts
 
 displayBuffer
+    jsr home
 
     ldx #23
     stx .lineNr
@@ -86,7 +91,7 @@ displayBuffer
 .displayChar
     ldy #0
 -   lda (zp_lineBufferPos),y
-    jsr chrout
+    +printAcc
     iny
     dec .displayLength
     bne -
@@ -111,41 +116,6 @@ displayBuffer
 
 +   rts
 
-displayLineFromCurrentSector
-    lda lastDisplayedLine
-    sta multiply16
-    lda lastDisplayedLine+1
-    sta multiply16+1
-    lda #lineTableIncr      ; size of lineTable entry
-    sta multiply8
-    jsr multiply     ; result A=lo, Y=hi
-    jsr calcZpLineTable
-
-    ldy #3
-    lda (zp_lineBufferPos),y
-    pha
-    ;sta .lineStart
-    
-    iny
-    lda (zp_lineBufferPos),y
-    tax
-    ;sta .lineLength
-
-    pla
-    tay
-
-    ;ldy .lineStart
--   lda sectorData,y
-    jsr chrout
-    iny
-    beq +       ; y is running over. sector data is at an end
-    dex
-    bne -
-
-    lda #$0d
-    jsr chrout
-
-+   rts
 
 ; ------------------------------------------------
 ; vdc library functions. taken from vdc-basic
