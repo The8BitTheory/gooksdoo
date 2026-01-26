@@ -123,8 +123,10 @@ displayBuffer
     sta zp_lineBufferPos+1
     inx
     lda bufferTable,x
-    sta .displayLength
+    sta displayLength
     inx
+
+    stx .tempX
 
     cmp #0
     beq .lineFeed
@@ -132,15 +134,15 @@ displayBuffer
 .displayChar
     ldy #0
 -   lda (zp_lineBufferPos),y
-    +printAcc
     iny
-    dec .displayLength
+    sta displayValue
+    jsr checkAsciiUtf8
+    bcs +
+    +printAcc
++   dec displayLength
     bne -
 
 .lineFeed
-    stx .tempX
-    sty .tempY
-
 ; set vram pointer to beginning of next line
     ldx #0
     lda .lineNr
@@ -158,13 +160,12 @@ displayBuffer
 
     jsr AY_to_vdc_regs_18_19
 
--   jsr k_getin
-    beq -
+;-   jsr k_getin
+;    beq -
     cmp #$03
     beq +
 
     ldx .tempX
-    ldy .tempY
 
     inc .lineNr
     lda .lineNr
@@ -241,7 +242,7 @@ vdc_do_YYAA_cycles
 .lineNr     !byte 0
 .counter    !byte 0
 .lineStart  !byte 0
-.displayLength !byte 0
+displayLength !byte 0
 .tempX      !byte 0
 .tempY      !byte 0
 
@@ -249,3 +250,4 @@ vdc_do_YYAA_cycles
 screenLineOffset   !word   0,  80, 160, 240, 320, 400, 480, 560, 640, 720, 800, 880
                     !word 960,1040,1120,1200,1280,1360,1440,1520,1600,1680,1760,1840,1920
 
+displayValue  !byte 0

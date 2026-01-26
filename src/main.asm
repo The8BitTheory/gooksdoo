@@ -119,6 +119,7 @@ main
 !src "src/frontend/logic/showDirectory.asm"
 !src "src/frontend/logic/showTextfile.asm"
 !src "src/frontend/output/textmode/initVdcText.asm"
+!src "src/frontend/output/utf8.asm"
 
 ; a lineTable entry is a pointer into raw content to form a displayable line.
 ; lines can be 80 chars max

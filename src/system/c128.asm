@@ -15,10 +15,11 @@ zp_sectorLineTable = $0f ; -$10   the linetable address of the current line
 zp_lineBufferPos   = $11   ; -$12  the linebuffer address of the current line
 zp_indexPtr     = $13 ; -$14    used to read data from either sectorData or lineBuffer
 zp_jumpTarget   = $15 ; -$16    
+zp_tempCalc = $17 ; -$18
 
-arg1 = $17 ; - $18
-arg2 = $19 ; - $1a
-arg3 = $1b ; - $1c
+arg1 = $19 ; - $1a
+arg2 = $1b ; - $1c
+arg3 = $1d ; - $1e
 
 detectC128
     rts
