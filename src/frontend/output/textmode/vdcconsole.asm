@@ -12,9 +12,22 @@
 !macro setCursorXY .xPos, .yPos {
     ;regs $18/$19 (dec 12/13) set vram address
     ldx #.xPos
-    ldy #.yPos
-    lda screenLineOffset,y
+    lda #.yPos
+    asl
     tay
+    lda screenLineOffset,y  ; lb. needed in Y
+    pha
+    iny
+    lda screenLineOffset,y  ; hb. needed in A
+    tax
+    pla
+    clc
+    adc #.xPos
+    tay
+    
+    txa
+    adc #0
+
     jsr AY_to_vdc_regs_18_19
 }
 
@@ -108,8 +121,7 @@ printDirectory
     rts
 
 displayBuffer
-    jsr clearScreen
-    jsr home
+    +setCursorXY 0,1
 
     ldx #1
     stx .lineNr
@@ -145,7 +157,11 @@ displayBuffer
 .lineFeed
 ; set vram pointer to beginning of next line
     ldx #0
+    inc .lineNr
     lda .lineNr
+    cmp #24
+    beq +
+
     asl
     tay
 
@@ -157,20 +173,10 @@ displayBuffer
     pla
     tay
     txa
-
     jsr AY_to_vdc_regs_18_19
 
-;-   jsr k_getin
-;    beq -
-    cmp #$03
-    beq +
-
     ldx .tempX
-
-    inc .lineNr
-    lda .lineNr
-    cmp #24
-    bne .displayLine
+    jmp .displayLine
 
 +   rts
 

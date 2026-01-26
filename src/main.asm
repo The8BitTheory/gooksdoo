@@ -12,16 +12,17 @@ main
     sta $ba ; set devicenr to 9
     jsr disableBasicRom
     jsr initVdcTextmode
+    jsr clearScreen
 
-    lda #$0d
-    jsr chrout
-    lda #14
-    jsr chrout
+    ;lda #$0d
+    ;jsr chrout
+    ;lda #14
+    ;jsr chrout
 
-    jsr .printSectorDataAddress
-    jsr .printLineTableAddress
-    jsr .printLineBufferAddress
-    jsr .printLineBufferTableAddress
+    ;jsr .printSectorDataAddress
+    ;jsr .printLineTableAddress
+    ;jsr .printLineBufferAddress
+    ;jsr .printLineBufferTableAddress
     
     jsr showTextfile
 ;    jsr showDirectory
