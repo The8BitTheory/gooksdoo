@@ -15,6 +15,7 @@ main
     jsr disableBasicRom
     jsr initVdcTextmode
     jsr clearScreen
+    jsr drawTextfileBorder
 
     ;lda #$0d
     ;jsr chrout

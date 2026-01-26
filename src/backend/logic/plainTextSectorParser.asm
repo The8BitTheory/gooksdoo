@@ -183,7 +183,7 @@ readNextByteWithoutInc
     lda .readIndex
     sta (zp_sectorLineTable),y
     
-incLineTable
+;incLineTable
     clc
     lda zp_sectorLineTable
     adc #lineTableIncr

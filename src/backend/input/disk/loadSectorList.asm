@@ -111,9 +111,9 @@ closeSectorAccess
     adc #28
     tay
     lda sectorData,y
-    sta .nrBlocks
+    sta fileNrBlocks
     lda sectorData+1,y
-    sta .nrBlocks+1
+    sta fileNrBlocks+1
     
     jmp loadSeqFileViaSectors
 
@@ -162,11 +162,13 @@ doReadSector
 
 +   jsr chrin
     sta nextTrack
+    sta sectorData
     ldx $90
     beq +
     jmp .inError
 +   jsr chrin
     sta nextSector
+    sta sectorData+1
     ldx $90
     beq +
     jmp .inError
@@ -226,7 +228,8 @@ sector             !byte 0
 sectorData             !fill 256
 .blockRead          !pet "u1:5 0 ",0;00018 00001",$0d,0; " 5 0 ",0   ; followed by track and sector
 .index              !byte 0
-.nrBlocks           !word 0 ; the number of blocks the file has
+
+fileNrBlocks           !word 0 ; the number of blocks the file has
 
 
 

@@ -283,8 +283,52 @@ drawTextfileBorder
     ; 79 bytes ()
     lda #79    ;lowbyte
     ldy #00    ;highbyte
-    jsr vdc_do_YYAA_cycles
+    jmp vdc_do_YYAA_cycles
 
+; Sectors: lastIndexed/total nr of sectors
+; Buffer: firstSector / lastSector / firstline / lastline
+; Screen: first line / lastline
+drawStatusline
+    ; set cursor to 
+    +setCursorXY 0,24
+
+    +printString .txtSector
+
++   lda #'0'
+    +printAcc
+
+    lda #'/'
+    +printAcc
+
+    ; print total nr of blocks
+    lda fileNrBlocks
+    ldx fileNrBlocks+1
+    jsr makeItDec
+    ldx #0
+    stx .tempX
+-   ldx .tempX
+    lda decResult,x
+    inc .tempX
+    cmp #$30
+    beq -
+    +printAcc
+    ldx .tempX
+    cpx #5
+    bne -
+
+    lda #' '
+    +printAcc
+
+    ; print "Lines indexed: #"
+    +printString .txtLines
+
+    ; print ", buffered: x-y"
+    +printString .txtBuffer
+
+    ; print ", displayed: x-y"
+    lda #' '
+    +printAcc
+    +printString .txtScreen
 
     rts
 
@@ -442,12 +486,17 @@ vdc_do_YYAA_cycles
 .lineNr     !byte 0
 .counter    !byte 0
 .lineStart  !byte 0
-displayLength !byte 0
 .tempX      !byte 0
 .tempY      !byte 0
 
+.txtOf      !text " of ",0
+.txtSector  !text "Sectors indexed:",0
+.txtLines   !text "Lines indexed:",0
+.txtBuffer  !text ",buffered:",0
+.txtScreen  !text ",displayed:",0
 
+
+displayLength !byte 0
 screenLineOffset    !word   1,  81, 161, 241, 321, 401, 481, 561, 641, 721, 801, 881
-                    !word 961,1041,1121,1201,1281,1361,1441,1521,1601,1681,1761,1841
-
+                    !word 961,1041,1121,1201,1281,1361,1441,1521,1601,1681,1761,1841,1921
 displayValue  !byte 0
