@@ -26,7 +26,7 @@ initVdcTextmode
 
 .setColors
     ; light grey background
-    lda #$02    ;light grey background
+    lda #$0f    ;light grey background
     ldx #26
     jsr A_to_vdc_reg_X
 

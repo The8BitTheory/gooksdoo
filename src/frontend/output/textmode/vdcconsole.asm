@@ -69,7 +69,7 @@ clearScreen
     jsr vdc_do_YYAA_cycles
 
     ; attribute ram ($0800)
-    lda #$8f    ;white foreground, charset 1 (upper/lower)
+    lda #$c2    ;white foreground, charset 1 (upper/lower)
     ldy #00
     ldx #08
     jsr A_to_vram_XXYY  ; write first byte
@@ -148,11 +148,143 @@ drawTextfileBorder
     ldy #239
     jsr A_to_vram_XXYY
 
+    ; scroll region
+    lda #4  ; use offset from one line below and subtract 2
+    sta .lineNr
+
+-   lda .lineNr
+    asl
+    tay
+
+    lda screenLineOffset,y  ; lb, needs to go into Y
+    sta .tempY
+    lda screenLineOffset+1,y    ; hb, needs to go into x
+    sta .tempX
+
+    sec
+    lda .tempY
+    sbc #2
+    tay
+    lda .tempX
+    sbc #0
+    tax
+
+    lda #98
+    jsr A_to_vram_XXYY
+
+    inc .lineNr
+    lda .lineNr
+    cmp #25
+    bne -
+
     ; arrow down on bottom of scrollbar
     lda #159
     ldx #$07
     ldy #$7f
     jsr A_to_vram_XXYY
+
+    ; attribute-ram
+    ; top, left and right border parts need to be inverted with black
+    ; attribute ram ($0800)
+    jsr setBlockFill
+
+    lda #$c0    ;black foreground, charset 1 (upper/lower), reverse
+    ldx #$08
+    ldy #$50
+    jsr A_to_vram_XXYY
+
+    ; 79 bytes ()
+    lda #79    ;lowbyte
+    ldy #00    ;highbyte
+    jsr vdc_do_YYAA_cycles
+
+    ; vertical line on the left-hand side (22 lines, from 3rd line to last-but-one)
+    lda #2
+    sta .lineNr
+
+-   lda .lineNr
+    asl
+    tay
+
+    lda screenLineOffset,y  ; lb, needs to go into Y
+    sta .tempY
+    lda screenLineOffset+1,y    ; hb, needs to go into x
+    sta .tempX
+    
+    dec .tempY
+    
+    clc
+    lda .tempX
+    adc #$08
+    tax
+
+    ldy .tempY
+
+    lda #$c0
+    jsr A_to_vram_XXYY
+
+    inc .lineNr
+    lda .lineNr
+    cmp #24
+    bne -
+
+    ; vertical line on the right-hand side (22 lines, from 3rd line to last-but-one)
+    lda #3
+    sta .lineNr
+
+-   lda .lineNr
+    asl
+    tay
+
+    lda screenLineOffset,y  ; lb, needs to go into Y
+    sta .tempY
+    lda screenLineOffset+1,y    ; hb, needs to go into x
+    sta .tempX
+    
+    sec
+    lda .tempY
+    sbc #2
+    tay
+    lda .tempX
+    sbc #0
+    
+    clc
+    ;lda .tempX
+    adc #$08
+    tax
+
+    lda #$c0
+    jsr A_to_vram_XXYY
+
+    inc .lineNr
+    lda .lineNr
+    cmp #25
+    bne -
+
+    ; top row filled with spaces 
+    jsr setBlockFill
+
+    lda #$c3    ;charset 1 (upper/lower), color, reverse
+    ldx #$08
+    ldy #$00
+    jsr A_to_vram_XXYY
+
+    ; 79 bytes ()
+    lda #79    ;lowbyte
+    ldy #00    ;highbyte
+    jsr vdc_do_YYAA_cycles
+
+    ; bottom row
+    lda #$c3    ;charset 1 (upper/lower), color, reverse
+    ldx #$0f
+    ldy #$80
+    jsr A_to_vram_XXYY
+
+    ; 79 bytes ()
+    lda #79    ;lowbyte
+    ldy #00    ;highbyte
+    jsr vdc_do_YYAA_cycles
+
 
     rts
 
