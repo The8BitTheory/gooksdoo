@@ -81,4 +81,49 @@ doFast
     sta $ff00
     RTS
 
+; stores $0a-$8f to somewhere else
+saveZp
+    ldx #$0a
+    ldy #0
+-   lda $0,x
+    sta zpStore,y
+    iny
+    inx
+    cpx #$8f+1
+    bne -
+
+    ldx #0
+    ldy #9
+-   lda $1000,x
+    sta keyStore,x
+    lda #0
+    sta $1000,x
+    inx
+    dey
+    bpl -
+
+    rts
+
+recoverZp
+    ldx #$0a
+    ldy #0
+-   lda zpStore,y
+    sta $0,x
+    iny
+    inx
+    cpx #$8f+1
+    bne -
+
+    lda #0
+    ldx #0
+    ldy #9
+-   lda keyStore,x
+    sta $1000,x
+    inx
+    dey
+    bpl -
+    rts
+
 mmuBankConfig       !byte $3F,$7F,$BF,$FF,$16,$56,$96,$D6,$2A,$6A,$AA,$EA,$06,$0A,$01,$00
+zpStore             !fill 134
+keyStore            !fill 10    ;keeps values $1000-$1009

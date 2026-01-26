@@ -4,10 +4,12 @@
 k_primm = $ff7d
 
 *=$1c01
-!byte $0c,$1c,$b5,$07,$9e,$20,$37,$31,$38,$32,$00,$00,$00
+!byte $0c,$1c,$bb,$07,$9e,$20,$37,$31,$38,$32,$00,$00,$00
 ;jmp main
 
 main
+    jsr saveZp
+    
     lda #09
     sta $ba ; set devicenr to 9
     jsr disableBasicRom
@@ -27,6 +29,7 @@ main
     jsr showTextfile
 ;    jsr showDirectory
 
+    jsr recoverZp
     jmp setBank15
     
 
