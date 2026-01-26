@@ -21,7 +21,17 @@ initVdcTextmode
 
     jsr doSlow
     jsr .vcc
-    jsr doFast
+    jsr .setColors
+    jmp doFast
+
+.setColors
+    ; light grey background
+    lda #$02    ;light grey background
+    ldx #26
+    jsr A_to_vdc_reg_X
+
+    rts
+
 
 ; arguments: ram-source, vram-target, nr of characters to copy
 .vcc ; copy charset from RAM to VRAM

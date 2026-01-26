@@ -28,7 +28,16 @@ showTextfile
 
     jsr loadSectorList
 
-    jmp displayBuffer
+    ; todo: create header line with filename
+    ;       create statusline with sector-lines, buffer-lines, displayed-lines
+    jsr drawTextfileBorder
+    jsr displayBuffer
+
+-   jsr k_getin
+    beq -
+
+    rts
+
 
 
 ;filename            !text "About This Serve",0

@@ -103,7 +103,7 @@ readNextByteWithoutInc
 
 +   inc .lineLength
     lda .lineLength
-    cmp #80
+    cmp #78
     beq .finishLine
 
     lda .leftToIndex+1

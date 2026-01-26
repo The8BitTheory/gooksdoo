@@ -58,7 +58,7 @@ clearScreen
     jsr setBlockFill
 
     ; screen ram ($0000)
-    lda #$20    ;white foreground, charset 1 (upper/lower)
+    lda #$20    ;space characters
     ldy #0
     ldx #0
     jsr A_to_vram_XXYY  ; write first byte
@@ -93,6 +93,69 @@ clearScreen
     jmp vdc_do_YYAA_cycles
     rts
 
+drawTextfileBorder
+    ; top-left corner
+    lda #144
+    ldx #0
+    ldy #80
+    jsr A_to_vram_XXYY
+
+    ; top line
+    jsr setBlockFill
+    lda #142
+    ldx #00
+    ldy #81
+    jsr A_to_vram_XXYY
+    
+    ldy #00
+    lda #77
+    jsr vdc_do_YYAA_cycles
+
+    ; top-right corner
+    lda #146
+    ldx #0
+    ldy #159
+    jsr A_to_vram_XXYY
+
+    ; vertical line on the left-hand side (22 lines, from 3rd line to last-but-one)
+    lda #2
+    sta .lineNr
+
+-   lda .lineNr
+    asl
+    tay
+
+    lda screenLineOffset,y  ; lb, needs to go into Y
+    pha
+    lda screenLineOffset+1,y    ; hb, needs to go into x
+    tax
+    pla
+    tay
+    dey ; minus 1, because line offsets are for text (which is indented 1 character)
+
+    lda #147
+    jsr A_to_vram_XXYY
+
+    inc .lineNr
+    lda .lineNr
+    cmp #24
+    bne -
+
+    ; scroll-bar on the right-hand side
+    ; first, arrow up
+    lda #158
+    ldx #0
+    ldy #239
+    jsr A_to_vram_XXYY
+
+    ; arrow down on bottom of scrollbar
+    lda #159
+    ldx #$07
+    ldy #$7f
+    jsr A_to_vram_XXYY
+
+    rts
+
 printDirectory
     jsr home
 
@@ -121,11 +184,11 @@ printDirectory
     rts
 
 displayBuffer
-    +setCursorXY 0,1
+    +setCursorXY 0,2
 
-    ldx #1
+    ldx #2
     stx .lineNr
-    dex
+    ldx #0
 
 .displayLine
     lda bufferTable,x
@@ -156,7 +219,6 @@ displayBuffer
 
 .lineFeed
 ; set vram pointer to beginning of next line
-    ldx #0
     inc .lineNr
     lda .lineNr
     cmp #24
@@ -253,7 +315,7 @@ displayLength !byte 0
 .tempY      !byte 0
 
 
-screenLineOffset   !word   0,  80, 160, 240, 320, 400, 480, 560, 640, 720, 800, 880
-                    !word 960,1040,1120,1200,1280,1360,1440,1520,1600,1680,1760,1840,1920
+screenLineOffset    !word   1,  81, 161, 241, 321, 401, 481, 561, 641, 721, 801, 881
+                    !word 961,1041,1121,1201,1281,1361,1441,1521,1601,1681,1761,1841
 
 displayValue  !byte 0
