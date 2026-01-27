@@ -6,7 +6,10 @@ initPlainTextSectorParser
     lda #>lineTable
     sta zp_sectorLineTable+1
 
+    lda #1
+    sta nrIndexedSectorLines
     lda #0
+    sta nrIndexedSectorLines+1
     sta parseLinePointer
     sta parseLinePointer+1
 

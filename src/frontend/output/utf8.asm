@@ -128,7 +128,9 @@ checkAsciiUtf8
     beq .read3ByteSeq80
     cmp #$81
     beq .read3ByteSeq81
-    jmp .invalidSequence3Bytes
+    cmp #$bb
+    bne .invalidSequence3Bytes
+    jmp .checkBom
 
 .read3ByteSeq80
     ;sta .keeper
@@ -204,6 +206,12 @@ checkAsciiUtf8
     clc
     rts
 
+.checkBom
+    jsr .readNextSeqByte
+    cmp #$bf
+    beq .exitSkip
+    jmp .invalidSequence3Bytes
+    
 .exitSkip
     sec
     rts
