@@ -28,16 +28,27 @@ showTextfile
 
     jsr loadSectorList
     ; todo: create header line with filename
-    ;       create statusline with sector-lines, buffer-lines, displayed-lines
+    jsr drawHeaderLine
     jsr displayBuffer
     jsr drawStatusline
 
 -   jsr k_getin
     beq -
 
+    cmp #17     ;cursor down
+    bne +
+    jsr moveLinesUp
+
++   cmp #145 ; cursor up
+    bne +
+    jsr moveLinesDown
+
++   cmp #'X'
+    bne -
     rts
 
 
 
 ;filename            !text "About This Serve",0
 ;filenameLength      !byte 16
+diskLoadFilename !pet "beowulf",$a0,0

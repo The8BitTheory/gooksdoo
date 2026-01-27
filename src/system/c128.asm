@@ -20,6 +20,9 @@ zp_tempCalc = $17 ; -$18
 arg1 = $19 ; - $1a
 arg2 = $1b ; - $1c
 arg3 = $1d ; - $1e
+arg4 = $1f ; - $20
+arg5 = $21 ; - $22
+arg6 = $23 ; - $24
 
 detectC128
     rts

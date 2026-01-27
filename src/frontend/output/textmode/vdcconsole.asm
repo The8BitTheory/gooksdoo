@@ -49,6 +49,19 @@
 +
 }
 
+!macro printFilename .String {
+    ldx #31
+    ldy #0
+-   lda .String,y
+    cmp #$a0
+    beq +
+    jsr toScreencode        ; only modifies Acc
+    jsr A_to_vdc_reg_X
+    iny
+    jmp -
++
+}
+
 home
     +setCursorXY 0,0
     rts
@@ -285,6 +298,17 @@ drawTextfileBorder
     ldy #00    ;highbyte
     jmp vdc_do_YYAA_cycles
 
+drawHeaderLine
+    +setCursorXY 20,1
+
+    lda #' '
+    jsr printAcc
+    +printFilename diskLoadFilename
+    lda #' '
+    jsr printAcc
+    
+    rts
+
 ; Sectors: lastIndexed/total nr of sectors
 ; Buffer: firstSector / lastSector / firstline / lastline
 ; Screen: first line / lastline
@@ -460,6 +484,85 @@ displayBuffer
     rts
 
 
+; moves lines 2-23 to 1-22. for scrolling down
+;  we can copy lines from top to bottom (2>1, 3>2, ...)
+moveLinesUp
+    ; arg1=source. line 3
+    lda screenLineOffset+6
+    sta arg1
+    lda screenLineOffset+7
+    sta arg1+1
+
+    ; arg2=target. line 2
+    lda screenLineOffset+4
+    sta arg2
+    lda screenLineOffset+5
+    sta arg2+1
+
+    ; arg3=count
+    lda #78
+    sta arg3
+    lda #0
+    sta arg3+1
+
+    ; arg4=nr repeats
+    lda #21
+    sta arg4
+
+    ; arg5=increase target
+    lda #80
+    sta arg5
+    lda #0
+    sta arg5+1
+
+    ; arg6=increase source
+    lda #80
+    sta arg6
+    lda #0
+    sta arg6+1
+
+    ;jsr remember_mem_conf
+    jmp .vmc
+
+; moves lines 2-23 to 3-24. for scrolling up
+;  we have to copy lines from bottom to top (22>23, 21>22, ...)
+moveLinesDown
+    lda screenLineOffset+44
+    sta arg1
+    lda screenLineOffset+45
+    sta arg1+1
+
+    ; arg2=target. line 1
+    lda screenLineOffset+46
+    sta arg2
+    lda screenLineOffset+47
+    sta arg2+1
+
+    ; arg3=count
+    lda #78
+    sta arg3
+    lda #0
+    sta arg3+1
+
+    ; arg4=nr repeats
+    lda #21
+    sta arg4
+
+    ; arg5=increase target. -80 $ffb0 is two's complement of -80
+    lda #$b0
+    sta arg5
+    lda #$ff
+    sta arg5+1
+
+    ; arg6=increase source. -80 $ffb0 is two's complement of -80
+    lda #$b0
+    sta arg6
+    lda #$ff
+    sta arg6+1
+
+    ;jsr remember_mem_conf
+    jmp .vmc
+
 ; ------------------------------------------------
 ; vdc library functions. taken from vdc-basic
 ; ------------------------------------------------
@@ -523,6 +626,68 @@ vdc_do_YYAA_cycles
 				dey
 				bne -
 +		rts
+
+.vmc
+    jsr setBlockCopy
+
+    ; set source
+.block_copy_source
+    ldy arg1
+    lda arg1 + 1
+    ldx #32
+    jsr AY_to_vdc_regs_Xp1
+
+    ; set target
+.block_copy_target
+    ldy arg2
+    lda arg2 + 1
+    jsr AY_to_vdc_regs_18_19
+
+    ; set count
+    lda arg3
+    ldy arg3 + 1
+    jsr vdc_do_YYAA_cycles
+    
+    ; set nr repeats
+    dec arg4
+    beq .vmc_done
+
+    ; increase target address
+    clc
+    lda arg2
+    adc arg5
+    sta arg2
+
+    lda arg2+1
+    adc arg5+1
+    sta arg2+1    
+
+    ; should source address be increased?
+    ; check HB
+    lda arg6+1
+    cmp #0
+    bne +       ; yes. jump to increasing source address
+
+    ; check LB (only when HB equals zero)
+    lda arg6
+    cmp #0
+    beq .block_copy_target       ; LB not zero. jump to updating target address register (ie leave source address register alone)
+
+    ; increase source address
++   clc
+    lda arg1
+    adc arg6
+    sta arg1
+
+    lda arg1+1
+    adc arg6+1
+    sta arg1+1
+    jmp .block_copy_source      ; jump to updating source address register
+
+.vmc_done
+
+    ;jmp complex_instruction_shared_exit
+    rts
 
 .screenLineNr     !byte 0
 .counter    !byte 0

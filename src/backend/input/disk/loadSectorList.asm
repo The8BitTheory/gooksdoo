@@ -100,7 +100,7 @@ closeSectorAccess
     ldx #0
 -   iny
     lda sectorData,y
-    cmp .filename,x
+    cmp diskLoadFilename,x
     bne .skipToNextEntry
     inx
     cmp #$a0
@@ -219,7 +219,8 @@ outError
 ; when looking for the file to open
 nextTrack          !byte 0
 nextSector         !byte 0
-.filename           !pet "bridge",$a0
+;.filename           !pet "bridge",$a0
+;.filename           !pet "beowulf",$a0
 
 .errorCode          !byte 0
 track              !byte 0
