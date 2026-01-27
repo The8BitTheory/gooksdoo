@@ -11,10 +11,6 @@
 ; - bufferToScreen  -> all required lines are copied to VRAM
 
 loadSeqFileViaSectors
-    lda #0
-    sta lastDisplayedLine
-    sta lastDisplayedLine+1
-
     jsr initPlainTextSectorParser ; initializes all variables and pointers
     jsr initBufferLineTable
 
@@ -28,6 +24,7 @@ loadSeqFileViaSectors
 
 ; parse it and keep parsing until we have lineTable entries for the first 25 (or 23) lines on screen
     jsr indexSectorWrapped  ; parsing writes lineTable entries and does line-breaks correctly (not splitting words)
+    inc nrIndexedSectors
 
     jsr sectorDataToBuffer
     
@@ -45,13 +42,6 @@ loadSeqFileViaSectors
 
     jsr indexBufferWrapped
 
-; once the sector data (lineTable and buffer) for 25 lines is in memory, display 25 lines
-;   displaying 25 lines requires re-visiting the sectors on disk.
-;   sounds tedious, but being able to work with complete data (and not handle lines across sectors) is so much easier.
-;   also: displaying 25 lines should require accessing 8 sectors max, usually only about 3-4.
-    
-    nop
-    nop
     rts
 
 calcZpLineTable
@@ -63,9 +53,9 @@ calcZpLineTable
     sta zp_sectorLineTable+1
     rts
 
-lastDisplayedLine   !word 0 ; helps comparing if we need to print more lines
-
 parseLinePointer    !word 0 ; points to the line currently parsed
 displayLinePointer  !word 0 ; points to the line currently displayed
+
+nrIndexedSectors    !byte 0 
 
 .sectorsToRead      !byte 0 

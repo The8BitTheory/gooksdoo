@@ -119,9 +119,9 @@ drawTextfileBorder
 
     ; vertical line on the left-hand side (22 lines, from 3rd line to last-but-one)
     lda #2
-    sta .lineNr
+    sta .screenLineNr
 
--   lda .lineNr
+-   lda .screenLineNr
     asl
     tay
 
@@ -136,8 +136,8 @@ drawTextfileBorder
     lda #147
     jsr A_to_vram_XXYY
 
-    inc .lineNr
-    lda .lineNr
+    inc .screenLineNr
+    lda .screenLineNr
     cmp #24
     bne -
 
@@ -150,9 +150,9 @@ drawTextfileBorder
 
     ; scroll region
     lda #4  ; use offset from one line below and subtract 2
-    sta .lineNr
+    sta .screenLineNr
 
--   lda .lineNr
+-   lda .screenLineNr
     asl
     tay
 
@@ -172,8 +172,8 @@ drawTextfileBorder
     lda #98
     jsr A_to_vram_XXYY
 
-    inc .lineNr
-    lda .lineNr
+    inc .screenLineNr
+    lda .screenLineNr
     cmp #25
     bne -
 
@@ -200,9 +200,9 @@ drawTextfileBorder
 
     ; vertical line on the left-hand side (22 lines, from 3rd line to last-but-one)
     lda #2
-    sta .lineNr
+    sta .screenLineNr
 
--   lda .lineNr
+-   lda .screenLineNr
     asl
     tay
 
@@ -223,16 +223,16 @@ drawTextfileBorder
     lda #$c0
     jsr A_to_vram_XXYY
 
-    inc .lineNr
-    lda .lineNr
+    inc .screenLineNr
+    lda .screenLineNr
     cmp #24
     bne -
 
     ; vertical line on the right-hand side (22 lines, from 3rd line to last-but-one)
     lda #3
-    sta .lineNr
+    sta .screenLineNr
 
--   lda .lineNr
+-   lda .screenLineNr
     asl
     tay
 
@@ -256,8 +256,8 @@ drawTextfileBorder
     lda #$c0
     jsr A_to_vram_XXYY
 
-    inc .lineNr
-    lda .lineNr
+    inc .screenLineNr
+    lda .screenLineNr
     cmp #25
     bne -
 
@@ -293,43 +293,73 @@ drawStatusline
     +setCursorXY 0,24
 
     +printString .txtSector
-
-+   lda #'0'
-    +printAcc
+    lda nrIndexedSectors
+    ldx #0
+    jsr printDecimal
 
     lda #'/'
-    +printAcc
+    jsr printAcc
 
     ; print total nr of blocks
     lda fileNrBlocks
     ldx fileNrBlocks+1
+    jsr printDecimal
+
+    lda #' '
+    jsr printAcc
+
+    ; print "Lines indexed: #"
+    +printString .txtLines
+    lda nrIndexedSectorLines
+    ldx nrIndexedSectorLines+1
+    jsr printDecimal
+
+    ; print ", buffered: x-y"
+    +printString .txtBuffer
+    lda firstBufferedLine
+    ldx firstBufferedLine+1
+    jsr printDecimal
+
+    lda #'-'
+    jsr printAcc
+
+    lda lastBufferedLine
+    ldx lastBufferedLine+1
+    jsr printDecimal
+
+    ; print ", displayed: x-y"
+    +printString .txtScreen
+    lda firstDisplayedLine
+    ldx firstDisplayedLine+1
+    jsr printDecimal
+    lda #'-'
+    jsr printAcc
+    lda lastDisplayedLine
+    ldx lastDisplayedLine+1
+    jsr printDecimal
+
+    rts
+
+printAcc
+    ldx #31
+    jsr toScreencode
+    jmp A_to_vdc_reg_X  ; no rts here. this is a macro, not a subroutine
+
+printDecimal
     jsr makeItDec
     ldx #0
     stx .tempX
 -   ldx .tempX
     lda decResult,x
-    inc .tempX
+    inx
+    cpx #5
+    beq +
+    stx .tempX
     cmp #$30
     beq -
     +printAcc
-    ldx .tempX
-    cpx #5
-    bne -
-
-    lda #' '
-    +printAcc
-
-    ; print "Lines indexed: #"
-    +printString .txtLines
-
-    ; print ", buffered: x-y"
-    +printString .txtBuffer
-
-    ; print ", displayed: x-y"
-    lda #' '
-    +printAcc
-    +printString .txtScreen
-
+    jmp -
++   jsr printAcc
     rts
 
 printDirectory
@@ -347,7 +377,7 @@ printDirectory
     sta c_fetch_zp
 
     ldy #0
-    sty .lineNr
+    sty .screenLineNr
 
     ldy #0
 -   ldx zp_directoryBank
@@ -362,8 +392,15 @@ printDirectory
 displayBuffer
     +setCursorXY 0,2
 
+    lda #1
+    sta firstDisplayedLine
+    lda #0
+    sta firstDisplayedLine+1
+    sta lastDisplayedLine
+    sta lastDisplayedLine+1
+
     ldx #2
-    stx .lineNr
+    stx .screenLineNr
     ldx #0
 
 .displayLine
@@ -394,15 +431,18 @@ displayBuffer
     bne -
 
 .lineFeed
-; set vram pointer to beginning of next line
-    inc .lineNr
-    lda .lineNr
-    cmp #24
-    beq +
+    inc lastDisplayedLine
+    bne +
+    inc lastDisplayedLine+1
 
++   inc .screenLineNr
+    lda .screenLineNr
+    cmp #24
+    beq .displayBufferDone
+
+; set vram pointer to beginning of next line
     asl
     tay
-
     lda screenLineOffset,y  ; lb. needed in Y
     pha
     iny
@@ -416,7 +456,8 @@ displayBuffer
     ldx .tempX
     jmp .displayLine
 
-+   rts
+.displayBufferDone
+    rts
 
 
 ; ------------------------------------------------
@@ -483,14 +524,14 @@ vdc_do_YYAA_cycles
 				bne -
 +		rts
 
-.lineNr     !byte 0
+.screenLineNr     !byte 0
 .counter    !byte 0
 .lineStart  !byte 0
 .tempX      !byte 0
 .tempY      !byte 0
 
 .txtOf      !text " of ",0
-.txtSector  !text "Sectors indexed:",0
+.txtSector  !text "Sectors indexed: ",0
 .txtLines   !text "Lines indexed:",0
 .txtBuffer  !text ",buffered:",0
 .txtScreen  !text ",displayed:",0
@@ -500,3 +541,5 @@ displayLength !byte 0
 screenLineOffset    !word   1,  81, 161, 241, 321, 401, 481, 561, 641, 721, 801, 881
                     !word 961,1041,1121,1201,1281,1361,1441,1521,1601,1681,1761,1841,1921
 displayValue  !byte 0
+firstDisplayedLine  !word 0
+lastDisplayedLine   !word 0

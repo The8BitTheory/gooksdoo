@@ -76,7 +76,7 @@ readNextByteWithoutInc
 
 ; each line takes 3 bytes in the lineTable. 2 bytes for pointer, 1 byte for line length
 .parseLine
-    lda .lineLength
++   lda .lineLength
     bne .continueParseLine
 
     lda #0
@@ -190,6 +190,11 @@ readNextByteWithoutInc
     sta zp_sectorLineTable
     bcc +
     inc zp_sectorLineTable+1
+
++   inc nrIndexedSectorLines
+    bne +
+    inc nrIndexedSectorLines+1
+
 +   rts
 
 initBufferLineTable
@@ -223,6 +228,13 @@ sectorDataToBuffer
 ; does the same what indexSectorWrapped did, but for the 2k buffer.
 ; in addition, it keeps the line lengths
 indexBufferWrapped
+    lda #1
+    sta firstBufferedLine
+    lda #0
+    sta firstBufferedLine+1
+    sta lastBufferedLine
+    sta lastBufferedLine+1
+    
     jsr initBufferLineTable
 
     lda #<lineBuffer
@@ -275,7 +287,11 @@ indexBufferWrapped
     adc #0
     sta bufferTable,y
 
-    rts
+    inc lastBufferedLine
+    bne +
+    inc lastBufferedLine+1
+
++   rts
 
 .writeBufferEntryLength
     lda bufferTablePosition
@@ -309,6 +325,9 @@ lineTableIncr   = 4
 lineBuffer      !fill 2000    ; buffer for lines spreading across sectors. used for displayLineFromCurrentSector
 bufferTable     !fill 255       ; 3 bytes per entry, 25 entries max (23, really). 255 bytes make room for 85 entries
 .nrBufferEntries    !byte 0
+nrIndexedSectorLines  !word 0     
+firstBufferedLine       !word 0
+lastBufferedLine        !word 0
 
 bufferTablePosition !byte 0 ; the lineNr of the buffer we're writing
 

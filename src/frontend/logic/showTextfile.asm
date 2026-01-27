@@ -27,10 +27,10 @@ showTextfile
     sta diskLoadDeviceNr
 
     jsr loadSectorList
-    jsr drawStatusline
     ; todo: create header line with filename
     ;       create statusline with sector-lines, buffer-lines, displayed-lines
     jsr displayBuffer
+    jsr drawStatusline
 
 -   jsr k_getin
     beq -
