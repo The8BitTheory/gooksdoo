@@ -312,7 +312,21 @@ drawHeaderLine
 ; Sectors: lastIndexed/total nr of sectors
 ; Buffer: firstSector / lastSector / firstline / lastline
 ; Screen: first line / lastline
-drawStatusline
+drawStatusBar
+    jsr setBlockFill
+    ; screen ram ($0000)
+    lda #$20    ;space characters
+    ldy screenLineOffset+48
+    ;ldy #$80
+    ldx screenLineOffset+49
+    ;ldx #$07
+    jsr A_to_vram_XXYY  ; write first byte
+
+    ; 80 bytes (79, actually)
+    lda #79    ;lowbyte
+    ldy #00    ;highbyte
+    jsr vdc_do_YYAA_cycles
+
     ; set cursor to 
     +setCursorXY 0,24
 
@@ -340,8 +354,14 @@ drawStatusline
 
     ; print ", buffered: x-y"
     +printString .txtBuffer
+    clc
     lda firstBufferedLine
-    ldx firstBufferedLine+1
+    adc #1
+    tay
+    lda firstBufferedLine+1
+    adc #0
+    tax
+    tya
     jsr printDecimal
 
     lda #'-'
@@ -353,8 +373,15 @@ drawStatusline
 
     ; print ", displayed: x-y"
     +printString .txtScreen
+    ; increase displayedline by 1, because we work zero-based but display 1-based
+    clc
     lda firstDisplayedLine
-    ldx firstDisplayedLine+1
+    adc #1
+    tay
+    lda firstDisplayedLine+1
+    adc #0
+    tax
+    tya
     jsr printDecimal
     lda #'-'
     jsr printAcc
@@ -416,9 +443,8 @@ printDirectory
 displayBuffer
     +setCursorXY 0,2
 
-    lda #1
-    sta firstDisplayedLine
     lda #0
+    sta firstDisplayedLine
     sta firstDisplayedLine+1
     sta lastDisplayedLine
     sta lastDisplayedLine+1
@@ -522,7 +548,10 @@ moveLinesUp
     sta arg6+1
 
     ;jsr remember_mem_conf
-    jmp .vmc
+    ;jsr doSlow
+    jsr .vmc
+    ;jmp doFast
+    rts
 
 ; moves lines 2-23 to 3-24. for scrolling up
 ;  we have to copy lines from bottom to top (22>23, 21>22, ...)
@@ -560,8 +589,90 @@ moveLinesDown
     lda #$ff
     sta arg6+1
 
-    ;jsr remember_mem_conf
-    jmp .vmc
+    jsr .vmc
+    rts
+
+copyFirstFromBufferToScreen
+    jsr setBlockFill
+    ; screen ram ($0000)
+    lda #$20    ;space characters
+    ldy #161
+    ldx #0
+    jsr A_to_vram_XXYY  ; write first byte
+
+    ; 77 bytes
+    lda #77    ;lowbyte
+    ldy #00    ;highbyte
+    jsr vdc_do_YYAA_cycles
+
+    +setCursorXY 0,2
+
+    clc
+    lda firstDisplayedLine
+    asl
+    adc firstDisplayedLine
+    tay
+    jmp .readPointersAndLength
+
+copyLastFromBufferToScreen
+    jsr setBlockFill
+    ; screen ram ($0000)
+    lda #$20    ;space characters
+    ; line 23 x 2 = 46
+    ldy screenLineOffset+46
+    ldx screenLineOffset+47
+    jsr A_to_vram_XXYY  ; write first byte
+
+    lda #77    ;lowbyte
+    ldy #00    ;highbyte
+    jsr vdc_do_YYAA_cycles
+
+    +setCursorXY 0,23
+
+    ; set pointer to buffer to last display line
+    clc
+    lda lastDisplayedLine
+    asl
+    adc lastDisplayedLine
+    tay
+
+.readPointersAndLength
+    lda bufferTable,y
+    sta zp_lineBufferPos
+    iny
+    lda bufferTable,y
+    sta zp_lineBufferPos+1
+    iny
+    lda bufferTable,y
+    sta displayLength
+    bne +
+    sta .tempY
+    jmp .fillWithSpaces
+    
++   ldy #0
+    ;sty .tempY
+-   ;ldy .tempY
+    lda (zp_lineBufferPos),y
+    iny
+;    inc .tempY
+    sta displayValue
+    jsr checkAsciiUtf8
+    bcs +
+    +printAcc
++   dec displayLength
+    bne -
+
+.fillWithSpaces
+;    sec
+;    lda #78
+;    sbc .tempY
+;    tay
+;-   lda #$20
+;    +printAcc
+;    dey
+;    bne -
+
+    rts
 
 ; ------------------------------------------------
 ; vdc library functions. taken from vdc-basic
@@ -695,7 +806,7 @@ vdc_do_YYAA_cycles
 .tempX      !byte 0
 .tempY      !byte 0
 
-.txtOf      !text " of ",0
+;.txtOf      !text " of ",0
 .txtSector  !text "Sectors indexed: ",0
 .txtLines   !text "Lines indexed:",0
 .txtBuffer  !text ",buffered:",0

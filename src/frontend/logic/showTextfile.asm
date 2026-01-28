@@ -27,25 +27,86 @@ showTextfile
     sta diskLoadDeviceNr
 
     jsr loadSectorList
-    ; todo: create header line with filename
     jsr drawHeaderLine
     jsr displayBuffer
-    jsr drawStatusline
+    jsr drawStatusBar
 
+.readKeyboardInput
+    jsr setBank15
 -   jsr k_getin
     beq -
+    jsr disableBasicRom
 
     cmp #17     ;cursor down
     bne +
-    jsr moveLinesUp
+    jsr .scrollDown
 
 +   cmp #145 ; cursor up
     bne +
-    jsr moveLinesDown
+    jsr .scrollUp
 
 +   cmp #'X'
-    bne -
+    bne .readKeyboardInput
     rts
+
+.scrollUp
+    ; if we're on first line, no scrolling
+    lda firstDisplayedLine+1
+    bne +
+    lda firstDisplayedLine
+    bne +
+    jmp .readKeyboardInput
+
++   jsr moveLinesDown
+
+    sec
+    lda firstDisplayedLine
+    sbc #1
+    sta firstDisplayedLine
+    bcs +
+    dec firstDisplayedLine+1
+
++   sec
+    lda lastDisplayedLine
+    sbc #1
+    sta lastDisplayedLine
+    bcs +
+    dec lastDisplayedLine+1
+
++   jsr copyFirstFromBufferToScreen
+
+    jmp .scrollingDone
+
+.scrollDown
+    ; check if we can scroll down
+    ; - check if more buffered lines are available
+    ; - if yes: copy line from buffer to last line
+    ; - if no: check if we can pull in more lines from sectors
+    ;           - if yes: copy next sector into buffer
+
+    lda lastBufferedLine+1
+    cmp lastDisplayedLine+1
+    bcc +
+    lda lastBufferedLine
+    cmp lastDisplayedLine
+    bne +
+    jmp .readKeyboardInput
+
++   jsr moveLinesUp
+
+    inc firstDisplayedLine
+    bne +
+    inc firstDisplayedLine+1
+
++   inc lastDisplayedLine
+    bne +
+    inc lastDisplayedLine+1
+    
++   jsr copyLastFromBufferToScreen
+
+.scrollingDone
+    jsr drawStatusBar
+    jmp .readKeyboardInput
 
 
 

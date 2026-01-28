@@ -12,8 +12,7 @@
 
 loadSeqFileViaSectors
     jsr initPlainTextSectorParser ; initializes all variables and pointers
-    jsr initBufferLineTable
-
+    jsr initBuffer
     lda #7
     sta .sectorsToRead
 

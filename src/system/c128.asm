@@ -31,13 +31,13 @@ initC128
     rts
 
 disableBasicRom
-    lda #%00001110
-    sta $ff00
+    ldy #%00001110
+    sty $ff00
     rts
 
 setBank15
-    LDA #$00
-    STA $FF00
+    LDy #$00
+    STy $FF00
     rts
 
 ; goes to 1 mhz

@@ -16,27 +16,31 @@ main
     jsr initVdcTextmode
     jsr clearScreen
     jsr drawTextfileBorder
-
-    ;lda #$0d
-    ;jsr chrout
-    ;lda #14
-    ;jsr chrout
-
-    ;jsr .printSectorDataAddress
-    ;jsr .printLineTableAddress
-    ;jsr .printLineBufferAddress
-    ;jsr .printLineBufferTableAddress
     
     jsr showTextfile
 ;    jsr showDirectory
 
     jsr recoverZp
-    jmp setBank15
+    jsr setBank15
+
+    lda #$00    ;light grey background
+    ldx #26
+    jsr A_to_vdc_reg_X
+
+    lda #147
+    jsr chrout
+
+    jsr .printSectorDataAddress
+    jsr .printLineTableAddress
+    jsr .printLineBufferAddress
+    jsr .printLineBufferTableAddress
+
+    rts
     
 
 .printSectorDataAddress
     jsr k_primm
-    !pet "sectorData: $",0
+    !pet "sectordata: $",0
 
     lda #>sectorData
     jsr byteToHex
@@ -55,7 +59,7 @@ main
 
 .printLineBufferTableAddress
     jsr k_primm
-    !pet "lineBufferTable: $",0
+    !pet "linebuffertable: $",0
 
     lda #>bufferTable
     jsr byteToHex
@@ -74,7 +78,7 @@ main
 
 .printLineBufferAddress
     jsr k_primm
-    !pet "lineBuffer: $",0
+    !pet "linebuffer: $",0
 
     lda #>lineBuffer
     jsr byteToHex
@@ -93,7 +97,7 @@ main
 
 .printLineTableAddress
     jsr k_primm
-    !pet "lineTable: $",0
+    !pet "linetable: $",0
 
     lda #>lineTable
     jsr byteToHex

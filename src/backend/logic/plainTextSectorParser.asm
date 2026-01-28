@@ -106,7 +106,7 @@ readNextByteWithoutInc
 
 +   inc .lineLength
     lda .lineLength
-    cmp #78
+    cmp #79
     beq .finishLine
 
     lda .leftToIndex+1
@@ -200,11 +200,17 @@ readNextByteWithoutInc
 
 +   rts
 
-initBufferLineTable
+initBuffer
     lda #<lineBuffer
     sta zp_lineBufferPos
     lda #>lineBuffer
     sta zp_lineBufferPos+1
+
+    lda #0
+    sta firstBufferedLine
+    sta firstBufferedLine+1
+    sta lastBufferedLine
+    sta lastBufferedLine+1
     
     rts
 
@@ -231,14 +237,6 @@ sectorDataToBuffer
 ; does the same what indexSectorWrapped did, but for the 2k buffer.
 ; in addition, it keeps the line lengths
 indexBufferWrapped
-    lda #1
-    sta firstBufferedLine
-    lda #0
-    sta firstBufferedLine+1
-    sta lastBufferedLine
-    sta lastBufferedLine+1
-    
-    jsr initBufferLineTable
 
     lda #<lineBuffer
     sta zp_indexPtr
