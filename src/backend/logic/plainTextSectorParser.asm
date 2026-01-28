@@ -166,7 +166,21 @@ readNextByteWithoutInc
     jmp .parseLine
 
 .doneParse
-    rts
+    lda .indexLength
+    bmi +
+
+    dec bufferTablePosition
+
+    ; if this was indexing the buffer, subtract 1 from the lastBufferedLine
+    ; that eliminates potentially incomplete lines
+    sec
+    lda lastBufferedLine
+    sbc #1
+    sta lastBufferedLine
+    bcs +
+    dec lastBufferedLine+1
+
++   rts
     nop
 
 .storePointerInLineTable
@@ -288,10 +302,6 @@ indexBufferWrapped
     adc #0
     sta bufferTable,y
 
-    inc lastBufferedLine
-    bne +
-    inc lastBufferedLine+1
-
 +   rts
 
 .writeBufferEntryLength
@@ -303,8 +313,12 @@ indexBufferWrapped
     iny
     lda .lineLength
     sta bufferTable,y
+
+    inc lastBufferedLine
+    bne +
+    inc lastBufferedLine+1
     
-    inc bufferTablePosition
++   inc bufferTablePosition
 
     rts
 
@@ -323,7 +337,7 @@ linesToView    !byte 0     ; how many lines should be viewed? (parse is always d
                             ; 23 for a full screen (header and footer line excluded)
                             ; or 1 if just scrolling up or down
 lineTableIncr   = 4
-lineBuffer      !fill 2000    ; buffer for lines spreading across sectors. used for displayLineFromCurrentSector
+lineBuffer      !fill 2048    ; buffer for lines spreading across sectors. used for displayLineFromCurrentSector
 bufferTable     !fill 255       ; 3 bytes per entry, 25 entries max (23, really). 255 bytes make room for 85 entries
 .nrBufferEntries    !byte 0
 nrIndexedSectorLines  !word 0     

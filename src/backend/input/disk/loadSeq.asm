@@ -13,7 +13,7 @@
 loadSeqFileViaSectors
     jsr initPlainTextSectorParser ; initializes all variables and pointers
     jsr initBuffer
-    lda #7
+    lda #8
     sta .sectorsToRead
 
     ; get the first/next sector of the file
