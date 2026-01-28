@@ -215,17 +215,20 @@ readNextByteWithoutInc
 +   rts
 
 initBuffer
-    lda #<lineBuffer
-    sta zp_lineBufferPos
-    lda #>lineBuffer
-    sta zp_lineBufferPos+1
-
     lda #0
     sta firstBufferedLine
     sta firstBufferedLine+1
     sta lastBufferedLine
     sta lastBufferedLine+1
-    
+    sta bufferSectorToUse
+
+    lda #<lineBuffer
+    sta zp_lineBufferPos
+    clc
+    lda #>lineBuffer
+    adc bufferSectorToUse
+    sta zp_lineBufferPos+1
+
     rts
 
 sectorDataToBuffer
@@ -345,5 +348,6 @@ firstBufferedLine       !word 0
 lastBufferedLine        !word 0
 
 bufferTablePosition !byte 0 ; the lineNr of the buffer we're writing
+
 
 

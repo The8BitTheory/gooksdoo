@@ -19,25 +19,43 @@ loadSeqFileViaSectors
     ; get the first/next sector of the file
 .nextSector
     jsr doReadSector        ; writes 256 bytes to sectorData. indexSector will read from this
-                            ; we don't immediately write to lineBuffer, because of linebreaks introduced for lines longer 80
+                            ; we don't immediately write to lineBuffer, because of linebreaks introduced for lines longer 78
 
-; parse it and keep parsing until we have lineTable entries for the first 25 (or 23) lines on screen
+    ; parse it and keep parsing until we have lineTable entries for the first 25 (or 23) lines on screen
     jsr indexSectorWrapped  ; parsing writes lineTable entries and does line-breaks correctly (not splitting words)
     inc nrIndexedSectors
+
+    ;zp_lineBufferPos needs to be set accordingly
+;    lda #<lineBuffer
+;    sta zp_lineBufferPos
+;    clc
+;    lda #>lineBuffer
+;    adc bufferSectorToUse
+;    sta zp_lineBufferPos+1
 
     jsr sectorDataToBuffer
     
     lda nextTrack
-    beq +
+    beq .allSectorsRead
+    
+    ; 8 sectors can be buffered
+;    inc bufferSectorToUse
+;    lda bufferSectorToUse
+;    cmp #8
+;    bne +
+;    lda #0
+;    sta bufferSectorToUse
+
++   dec .sectorsToRead
+    beq .allSectorsRead
+    lda nextTrack
     sta track
     lda nextSector
     sta sector
-    
-    dec .sectorsToRead
-    bne .nextSector
-    jmp +
-    
-+   jsr closeSectorAccess
+    jmp .nextSector
+
+.allSectorsRead
+    jsr closeSectorAccess
 
     jsr indexBufferWrapped
 
@@ -56,5 +74,6 @@ parseLinePointer    !word 0 ; points to the line currently parsed
 displayLinePointer  !word 0 ; points to the line currently displayed
 
 nrIndexedSectors    !byte 0 
+bufferSectorToUse   !byte 0     ; high-byte of lineBuffer address to use to write sectorData to
 
 .sectorsToRead      !byte 0 

@@ -114,6 +114,18 @@ showTextfile
     jmp .readKeyboardInput
 
 .readNextSectorIntoBuffer
+    lda nextTrack
+    beq .noNextSector
+    sta track
+    lda nextSector
+    sta sector
+
+    jsr doReadSector
+    jsr indexSectorWrapped  ; parsing writes lineTable entries and does line-breaks correctly (not splitting words)
+    inc nrIndexedSectors
+
+
+.noNextSector
     sec
     rts
 

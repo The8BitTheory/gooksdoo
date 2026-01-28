@@ -547,10 +547,7 @@ moveLinesUp
     lda #0
     sta arg6+1
 
-    ;jsr remember_mem_conf
-    ;jsr doSlow
     jsr .vmc
-    ;jmp doFast
     rts
 
 ; moves lines 2-23 to 3-24. for scrolling up
@@ -646,15 +643,11 @@ copyLastFromBufferToScreen
     lda bufferTable,y
     sta displayLength
     bne +
-    sta .tempY
-    jmp .fillWithSpaces
+    jmp .copyDone
     
 +   ldy #0
-    ;sty .tempY
--   ;ldy .tempY
-    lda (zp_lineBufferPos),y
+-   lda (zp_lineBufferPos),y
     iny
-;    inc .tempY
     sta displayValue
     jsr checkAsciiUtf8
     bcs +
@@ -662,16 +655,7 @@ copyLastFromBufferToScreen
 +   dec displayLength
     bne -
 
-.fillWithSpaces
-;    sec
-;    lda #78
-;    sbc .tempY
-;    tay
-;-   lda #$20
-;    +printAcc
-;    dey
-;    bne -
-
+.copyDone
     rts
 
 ; ------------------------------------------------

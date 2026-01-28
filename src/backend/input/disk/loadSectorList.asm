@@ -8,12 +8,7 @@
 +
 }
 
-loadSectorList
-    lda #18
-    sta track
-    lda #1
-    sta sector
-
+openCommandAndAccessChannel
     lda #0
     sta fileOpError
 
@@ -37,7 +32,15 @@ loadSectorList
     ldx #<.filenameOpenBuffer
     ldy #>.filenameOpenBuffer
     jsr setNamLfsBnk
-    jsr openForInput
+    jmp openForInput
+
+loadSectorList
+    lda #18
+    sta track
+    lda #1
+    sta sector
+
+    jsr openCommandAndAccessChannel
 
 .readSector
     ;lda #1
