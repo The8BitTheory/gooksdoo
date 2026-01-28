@@ -57,7 +57,8 @@ showTextfile
     bne +
     jmp .readKeyboardInput
 
-+   jsr moveLinesDown
++   ; todo: check, if buffer contains previous line before scrolling
+    jsr moveLinesDown
 
     sec
     lda firstDisplayedLine
@@ -79,17 +80,21 @@ showTextfile
 
 .scrollDown
     ; check if we can scroll down
-    ; - check if more buffered lines are available
+    
     ; - if yes: copy line from buffer to last line
     ; - if no: check if we can pull in more lines from sectors
     ;           - if yes: copy next sector into buffer
 
+    ; check if more buffered lines are available
     lda lastBufferedLine+1
     cmp lastDisplayedLine+1
     bcc +
     lda lastBufferedLine
     cmp lastDisplayedLine
     bne +
+    ; no more lines in buffer. check if we can pull in more lines from sectors
+    jsr .readNextSectorIntoBuffer
+    bcc +
     jmp .readKeyboardInput
 
 +   jsr moveLinesUp
@@ -108,6 +113,9 @@ showTextfile
     jsr drawStatusBar
     jmp .readKeyboardInput
 
+.readNextSectorIntoBuffer
+    sec
+    rts
 
 
 ;filename            !text "About This Serve",0
