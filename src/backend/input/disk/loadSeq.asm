@@ -25,27 +25,12 @@ loadSeqFileViaSectors
     jsr indexSectorWrapped  ; parsing writes lineTable entries and does line-breaks correctly (not splitting words)
     inc nrIndexedSectors
 
-    ;zp_lineBufferPos needs to be set accordingly
-;    lda #<lineBuffer
-;    sta zp_lineBufferPos
-;    clc
-;    lda #>lineBuffer
-;    adc bufferSectorToUse
-;    sta zp_lineBufferPos+1
 
     jsr sectorDataToBuffer
     
     lda nextTrack
     beq .allSectorsRead
     
-    ; 8 sectors can be buffered
-;    inc bufferSectorToUse
-;    lda bufferSectorToUse
-;    cmp #8
-;    bne +
-;    lda #0
-;    sta bufferSectorToUse
-
 +   dec .sectorsToRead
     beq .allSectorsRead
     lda nextTrack

@@ -39,11 +39,11 @@ showTextfile
 
     cmp #17     ;cursor down
     bne +
-    jsr .scrollDown
+    jmp .scrollDown
 
 +   cmp #145 ; cursor up
     bne +
-    jsr .scrollUp
+    jmp .scrollUp
 
 +   cmp #'X'
     bne .readKeyboardInput
@@ -120,10 +120,16 @@ showTextfile
     lda nextSector
     sta sector
 
+    jsr openCommandAndAccessChannel
     jsr doReadSector
+    jsr closeSectorAccess
+
     jsr indexSectorWrapped  ; parsing writes lineTable entries and does line-breaks correctly (not splitting words)
     inc nrIndexedSectors
-
+    
+    jsr sectorDataToBuffer
+    clc
+    rts
 
 .noNextSector
     sec

@@ -58,8 +58,12 @@ readNextByte
     lda (zp_indexPtr),y ; was: sectorData,y
     tay
     inc .readIndex
+    lda .readIndex
+    cmp #254
     bne +
     inc zp_indexPtr+1
+    lda #0
+    sta .readIndex
 +   sec
     lda .leftToIndex
     sbc #1
@@ -232,6 +236,14 @@ initBuffer
     rts
 
 sectorDataToBuffer
+    ;zp_lineBufferPos needs to be set accordingly
+    lda #<lineBuffer
+    sta zp_lineBufferPos
+    clc
+    lda #>lineBuffer
+    adc bufferSectorToUse
+    sta zp_lineBufferPos+1
+
     ldx #2
     ldy #0
 -   lda sectorData,x
@@ -241,14 +253,28 @@ sectorDataToBuffer
     beq +
     bne -   ; as we read only 254 bytes, this is always true
 
-+   clc
++   lda #0
+    sta (zp_lineBufferPos),y
+    iny
+    sta (zp_lineBufferPos),y
+    dey
+    
+    clc
     tya
     adc zp_lineBufferPos
     sta zp_lineBufferPos
     bcc +
     inc zp_lineBufferPos+1
+
+    ; 8 sectors can be buffered
++   inc bufferSectorToUse
+    lda bufferSectorToUse
+    cmp #8
+    bne +
+    lda #0
+    sta bufferSectorToUse
+
 +   rts
-    nop
 
 ; this is called when all sectors are written to the buffer
 ; does the same what indexSectorWrapped did, but for the 2k buffer.
@@ -265,9 +291,9 @@ indexBufferWrapped
     lda #>.writeBufferEntryPosition
     sta zp_jumpTarget+1
 
-    lda #<2000
+    lda #<2048
     sta .leftToIndex
-    lda #>2000
+    lda #>2048
     sta .leftToIndex+1
 
     ldy #0
@@ -282,11 +308,6 @@ indexBufferWrapped
     bne -
 
 +   rts
-
-
-    rts
-    nop
-
 
 
 .writeBufferEntryPosition

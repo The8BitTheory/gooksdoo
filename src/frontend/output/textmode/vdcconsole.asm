@@ -474,6 +474,8 @@ displayBuffer
 -   lda (zp_lineBufferPos),y
     iny
     sta displayValue
+    cmp #0
+    beq -
     jsr checkAsciiUtf8
     bcs +
     +printAcc
@@ -648,6 +650,8 @@ copyLastFromBufferToScreen
 +   ldy #0
 -   lda (zp_lineBufferPos),y
     iny
+    cmp #0
+    beq -
     sta displayValue
     jsr checkAsciiUtf8
     bcs +
