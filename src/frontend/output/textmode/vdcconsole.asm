@@ -790,7 +790,6 @@ vdc_do_YYAA_cycles
 
 .screenLineNr     !byte 0
 .counter    !byte 0
-.lineStart  !byte 0
 .tempX      !byte 0
 .tempY      !byte 0
 

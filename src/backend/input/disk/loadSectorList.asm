@@ -220,20 +220,20 @@ outError
     jmp closeSectorAccess
 
 ; when looking for the file to open
-nextTrack          !byte 0
-nextSector         !byte 0
 ;.filename           !pet "bridge",$a0
 ;.filename           !pet "beowulf",$a0
 
 .errorCode          !byte 0
-track              !byte 0
-sector             !byte 0
 .filenameOpenBuffer !pet '#'
-sectorData             !fill 256
 .blockRead          !pet "u1:5 0 ",0;00018 00001",$0d,0; " 5 0 ",0   ; followed by track and sector
 .index              !byte 0
 
-fileNrBlocks           !word 0 ; the number of blocks the file has
+nextTrack           !byte 0
+nextSector          !byte 0
+track               !byte 0
+sector              !byte 0
+sectorData          !fill 256
+fileNrBlocks        !word 0 ; the number of blocks the file has
 
 
 

@@ -55,9 +55,6 @@ calcZpLineTable
     sta zp_sectorLineTable+1
     rts
 
-parseLinePointer    !word 0 ; points to the line currently parsed
-displayLinePointer  !word 0 ; points to the line currently displayed
-
 nrIndexedSectors    !byte 0 
 bufferSectorToUse   !byte 0     ; high-byte of lineBuffer address to use to write sectorData to
 

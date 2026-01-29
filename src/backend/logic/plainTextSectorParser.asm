@@ -10,8 +10,7 @@ initPlainTextSectorParser
     sta nrIndexedSectorLines
     lda #0
     sta nrIndexedSectorLines+1
-    sta parseLinePointer
-    sta parseLinePointer+1
+    sta nrIndexedSectors
 
     lda #23
     sta linesToView
@@ -152,8 +151,6 @@ readNextByteWithoutInc
     inc .leftToIndex+1
 
 .finishLineWithBreak
-    inc lineCount
-
     lda .indexLength
     bmi +
     jsr .writeBufferEntryLength
@@ -300,6 +297,8 @@ indexBufferWrapped
     sty .lineLength
     sty .indexLength
     sty .readIndex
+    sty bufferTablePosition
+    
 -   jsr .parseLine
     ldy .leftToIndex+1
     bne -
@@ -347,7 +346,6 @@ indexBufferWrapped
     rts
 
 
-.temp4          !word 0,0
 .lineLength     !byte 0     ; used to keep track of 80 chars max per line
 .readIndex      !byte 0     ; the lineNr of the current sector we're reading
 .charsSinceSpace !byte 0
@@ -355,15 +353,12 @@ indexBufferWrapped
 
 .leftToIndex    !word 0     ; how many bytes in this sector are still left
 
-lineCount       !byte 0     ; nr of lines indexed from sectors (used to index buffer as a countdown)
-
 linesToView    !byte 0     ; how many lines should be viewed? (parse is always done sector-wise)
                             ; 23 for a full screen (header and footer line excluded)
                             ; or 1 if just scrolling up or down
 lineTableIncr   = 4
 lineBuffer      !fill 2048    ; buffer for lines spreading across sectors. used for displayLineFromCurrentSector
 bufferTable     !fill 255       ; 3 bytes per entry, 25 entries max (23, really). 255 bytes make room for 85 entries
-.nrBufferEntries    !byte 0
 nrIndexedSectorLines  !word 0     
 firstBufferedLine       !word 0
 lastBufferedLine        !word 0

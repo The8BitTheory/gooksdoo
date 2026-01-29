@@ -23,7 +23,7 @@ main
     jsr recoverZp
     jsr setBank15
 
-    lda #$00    ;light grey background
+    lda #$00    ;black grey background
     ldx #26
     jsr A_to_vdc_reg_X
 
