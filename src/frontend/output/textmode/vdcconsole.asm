@@ -549,6 +549,7 @@ moveLinesUp
     lda #0
     sta arg6+1
 
+    jsr vsync
     jsr .vmc
     rts
 
@@ -588,6 +589,7 @@ moveLinesDown
     lda #$ff
     sta arg6+1
 
+    jsr vsync
     jsr .vmc
     rts
 
@@ -786,6 +788,19 @@ vdc_do_YYAA_cycles
 .vmc_done
 
     ;jmp complex_instruction_shared_exit
+    rts
+
+vsync
+;   wait until we are in text window (in case we're in a sync state right now)
+-   lda vdc_state
+    and #$20
+    bne -
+
+    ; wait until we are out of text window
+-   lda vdc_state
+    and #$20
+    beq -
+
     rts
 
 .screenLineNr     !byte 0
